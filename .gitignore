@@ -1,0 +1,8 @@
+node_modules
+dist
+ui/dist
+coverage
+*.log
+.DS_Store
+.playwright-mcp
+example/dist

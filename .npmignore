@@ -1,0 +1,13 @@
+src
+ui
+example
+test
+node_modules
+coverage
+.playwright-mcp
+tsconfig*.json
+jest.config.js
+eslint.config.mjs
+.prettierrc
+docker-compose.yml
+.github
