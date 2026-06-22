@@ -1,34 +1,31 @@
+<div align="center">
+
 # 🐂 Bullpen
 
-A lightweight, **dark-mode-first**, **NestJS-native** dashboard for [BullMQ](https://docs.bullmq.io).
+**A NestJS-native dashboard for [BullMQ](https://docs.bullmq.io).** One line to mount, no per-queue wiring, and it actually understands your NestJS app.
 
-[![npm version](https://img.shields.io/npm/v/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
+[![CI](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
+[![downloads](https://img.shields.io/npm/dm/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
+[![zero deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](#small-and-staying-that-way)
 [![license](https://img.shields.io/npm/l/nestjs-bullpen.svg)](./LICENSE)
-
-Bullpen auto-discovers every `@nestjs/bullmq` queue in your app and gives you a clean UI to inspect and manage them — counts, jobs, payloads, logs, stack traces, plus retry / promote / remove / pause / resume / clean. It is built entirely from NestJS primitives (a controller + a guard), so it runs on **Express and Fastify** with no adapter glue, and you wire it up in **one line**.
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-E0234E.svg)](./CONTRIBUTING.md)
 
 ![Bullpen dashboard](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-dark.png)
 
-## Why another board?
+</div>
 
-[`bull-board`](https://github.com/felixmosh/bull-board) is great, but it mounts platform-specific middleware and asks you to register every queue by hand. Bullpen takes a NestJS-first approach:
+## Why Bullpen
 
-- **One line, zero queue wiring** — `BullpenModule.forRoot()` auto-discovers your queues through Nest's `DiscoveryService`. No per-queue `forFeature`.
-- **Platform-agnostic** — it's just a NestJS controller guarded by a `CanActivate`. Works on Express _and_ Fastify identically, no adapter packages.
-- **Auth is a first-class option** — none / HTTP basic / any existing NestJS guard (JWT, sessions…) / a custom predicate.
-- **Configurable mount route** — drop it at `/admin/queues`, `/bullpen`, wherever.
-- **Modern, lightweight UI** — a single self-contained ~36&nbsp;KB asset. Dark by default, light on request. No external fonts, no runtime CDN.
-- **Read-only mode** — expose a safe, look-but-don't-touch board.
+Most queue dashboards treat BullMQ as a pile of Redis keys. Bullpen is built from NestJS primitives, so it can show the processor behind each queue, its concurrency, and its event handlers. It also mounts in a single line, because it finds your queues through Nest's DI container instead of asking you to register them again.
 
-## Install
+The goal is to stay out of your way: easy to drop in, configurable when you need it, and light enough that it isn't a tax on your app.
+
+## Quick start
 
 ```bash
 npm install nestjs-bullpen
 ```
-
-`@nestjs/common`, `@nestjs/core`, and `bullmq` are peer dependencies (you already have them with `@nestjs/bullmq`).
-
-## Quick start
 
 ```ts
 import { Module } from '@nestjs/common';
@@ -39,99 +36,79 @@ import { BullpenModule } from 'nestjs-bullpen';
   imports: [
     BullModule.forRoot({ connection: { host: 'localhost', port: 6379 } }),
     BullModule.registerQueue({ name: 'emails' }, { name: 'reports' }),
-
-    // That's it — Bullpen finds both queues automatically.
-    BullpenModule.forRoot(),
+    BullpenModule.forRoot(), // every queue above shows up automatically
   ],
 })
 export class AppModule {}
 ```
 
-Open `http://localhost:3000/bullpen`. Add auth and a custom route in the same options object:
+Open `http://localhost:3000/bullpen`. Want a route and auth? Same options object:
 
 ```ts
-BullpenModule.forRoot({
-  route: '/admin/queues',
-  auth: { type: 'basic', credentials: { username: 'admin', password: process.env.BULLPEN_PASS! } },
-});
+BullpenModule.forRoot({ route: '/admin/queues', auth: JwtAuthGuard });
 ```
 
-## Configuration
+That `auth: JwtAuthGuard` is the whole setup. Any guard you already use works. See [the auth docs](./docs/authentication.md) for basic, custom, roles, and read-only.
 
-| Option     | Type                                  | Default     | Description                                             |
-| ---------- | ------------------------------------- | ----------- | ------------------------------------------------------- |
-| `route`    | `string`                              | `/bullpen`  | Path the dashboard is mounted at.                       |
-| `auth`     | `BullpenAuthOptions`                  | `{type:'none'}` | Authentication strategy (see below).                |
-| `readOnly` | `boolean`                             | `false`     | Block every mutating endpoint with `403`.               |
-| `include`  | `string[]`                            | all         | Only expose these queues (by name).                     |
-| `exclude`  | `string[]`                            | —           | Hide these queues (by name).                            |
-| `title`    | `string`                              | `Bullpen`   | Dashboard title.                                        |
-| `theme`    | `'dark' \| 'light'`                   | `dark`      | Default theme (users can toggle; choice is remembered). |
+## What you get
 
-## Authentication
+- **Your NestJS topology, not just Redis.** Each queue shows its `@Processor` class, worker concurrency, and `@OnWorkerEvent` handlers. ([how it works](./docs/nestjs-integration.md))
+- **Auth that fits your app.** Hand it a guard (or several), HTTP basic, or a custom predicate. Role metadata is passed through so a `RolesGuard` resolves normally.
+- **Runs anywhere NestJS does.** It's a controller plus a guard, so Express and Fastify both work with no adapter packages.
+- **Built for big deployments.** Range-based pagination, counts that never fetch jobs, find-by-id, plus exports and bulk actions that are capped and tell you when they hit the cap. ([scaling](./docs/scaling.md))
+- **Real-time.** Live counts over SSE, falling back to polling when the auth mode can't stream.
+- **Job management.** Retry, promote, remove, pause/resume, clean, add jobs, and export to JSON, with an optional per-queue read-only lock.
+- **Dark-first UI** shipped as one self-contained file. No CDN calls and no web-font downloads.
 
-```ts
-// 1. None — dev only; logs a warning.
-BullpenModule.forRoot({ auth: { type: 'none' } });
+## Small, and staying that way
 
-// 2. HTTP basic — static credentials or a custom validator.
-BullpenModule.forRoot({
-  auth: {
-    type: 'basic',
-    credentials: [{ username: 'admin', password: 'secret' }],
-    // or: validate: async (user, pass) => myUserService.check(user, pass),
-  },
-});
+Lightweight isn't a tagline here. It's a project rule, checked on every build. Current numbers:
 
-// 3. Reuse any existing NestJS guard (JWT, session, roles…).
-BullpenModule.forRoot({ auth: { type: 'guard', useGuard: JwtAuthGuard } });
+| | Bullpen |
+| --- | --- |
+| Runtime dependencies | **0** (everything is a peer dep) |
+| UI bundle | one self-contained file, **~15 KB gzipped** |
+| Published package | **~32 KB** |
 
-// 4. Custom predicate over the raw request.
-BullpenModule.forRoot({
-  auth: { type: 'custom', authorize: (req) => Boolean((req as any).user?.isAdmin) },
-});
-```
+## Bullpen vs bull-board
 
-### Async configuration
+[bull-board](https://github.com/felixmosh/bull-board) is excellent and more battle-tested. Bullpen makes a different bet: go all-in on NestJS.
 
-When your options depend on `ConfigService` etc., use `forRootAsync`. The `route` stays synchronous (it has to be registered before routing), everything else is resolved by the factory:
+| | Bullpen | bull-board (+ `@bull-board/nestjs`) |
+| --- | --- | --- |
+| Setup | `forRoot()`, auto-discovers queues | register each queue with `forFeature` |
+| Express and Fastify | one build, no adapters | install the matching adapter |
+| Shows processor / concurrency / events | yes | no |
+| Auth built in | guard / basic / custom | guard the route yourself |
+| Live updates | SSE, polling fallback | polling |
+| Runtime dependencies | 0 | a few |
 
-```ts
-BullpenModule.forRootAsync({
-  route: '/admin/queues',
-  imports: [ConfigModule],
-  inject: [ConfigService],
-  useFactory: (config: ConfigService) => ({
-    auth: { type: 'basic', credentials: { username: 'admin', password: config.get('BULLPEN_PASS')! } },
-    readOnly: config.get('NODE_ENV') === 'production',
-  }),
-});
-```
+If you want a framework-agnostic board, use bull-board. If you live in NestJS, Bullpen should feel like it belongs.
+
+## Documentation
+
+[Getting started](./docs/getting-started.md) · [Configuration](./docs/configuration.md) · [Authentication](./docs/authentication.md) · [NestJS integration](./docs/nestjs-integration.md) · [Scaling](./docs/scaling.md) · [Development](./docs/development.md)
 
 ## Screenshots
 
-| Job inspector (dark) | Light theme |
+| Add a job | Light theme |
 | --- | --- |
-| ![Job detail](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-job.png) | ![Light theme](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-light.png) |
+| ![Add job](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-addjob.png) | ![Light](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-light.png) |
 
-## How it works
+## Roadmap
 
-- **Discovery.** On application bootstrap, Bullpen scans the DI container with `DiscoveryService` and keeps every provider that is a BullMQ `Queue`. That's exactly what `@nestjs/bullmq`'s `registerQueue()` produces, so no manual registration is needed.
-- **Routing.** `forRoot()` rewrites the controller's path metadata to your `route` before Nest maps routes — a single controller serves the UI shell at `route` and a small JSON API under `route/api/*`.
-- **No platform coupling.** Everything is a controller + a `CanActivate` guard, so the same code runs on `@nestjs/platform-express` and `@nestjs/platform-fastify`.
+It's early, and feedback shapes what comes next. On the radar:
 
-## Local development
+- Flow / parent-child job views
+- Per-queue throughput and latency charts
+- Job search by name and payload, not just id
+- A `nest g` schematic for one-command setup
 
-```bash
-docker compose up -d redis     # Redis on :6379
-npm install
-npm run build                  # compile lib + bundle UI
-npm run example                # demo app at http://localhost:3000/admin/queues (admin / admin)
-npm run seed                   # enqueue a mix of jobs in every state
-npm test                       # unit tests
-```
+Found a bug or want a feature? [Open an issue](https://github.com/NicolasCV/nestjs-bullpen/issues). Good first issues are tagged.
 
-`npm run example:fastify` boots the same demo on Fastify.
+## Contributing
+
+PRs are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) and [CLAUDE.md](./CLAUDE.md) for the conventions. The two that matter most: keep it lightweight, and keep it scale-safe.
 
 ## License
 

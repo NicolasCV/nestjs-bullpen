@@ -126,3 +126,35 @@ export const IconLock = (p: IconProps) =>
     p.size,
     p.class,
   );
+
+export const IconCpu = (p: IconProps) =>
+  svg(
+    [
+      <rect x="6" y="6" width="12" height="12" rx="2" />,
+      <rect x="9" y="9" width="6" height="6" rx="1" />,
+      <path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" />,
+    ],
+    p.size,
+    p.class,
+  );
+
+export const IconBolt = (p: IconProps) =>
+  svg([<path d="M13 2L4.5 13.5H11l-1 8.5L18.5 10.5H12z" />], p.size, p.class);
+
+export const IconWarning = (p: IconProps) =>
+  svg(
+    [
+      <path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z" />,
+      <path d="M12 9v4M12 17h.01" />,
+    ],
+    p.size,
+    p.class,
+  );
+
+export const IconPlus = (p: IconProps) => svg([<path d="M12 5v14M5 12h14" />], p.size, p.class);
+
+export const IconDownload = (p: IconProps) =>
+  svg([<path d="M12 3v12M7 10l5 5 5-5M5 21h14" />], p.size, p.class);
+
+export const IconSearch = (p: IconProps) =>
+  svg([<circle cx="11" cy="11" r="7" />, <path d="M21 21l-4.3-4.3" />], p.size, p.class);

@@ -1,0 +1,40 @@
+name: Bug report
+description: Something isn't working the way you expected
+labels: ['bug']
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Steps or a small repo/snippet. The smaller the better.
+    validations:
+      required: true
+  - type: input
+    id: bullpen-version
+    attributes:
+      label: nestjs-bullpen version
+    validations:
+      required: true
+  - type: input
+    id: nest-version
+    attributes:
+      label: NestJS version
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: HTTP platform
+      options:
+        - Express
+        - Fastify
+        - Not sure
+    validations:
+      required: true

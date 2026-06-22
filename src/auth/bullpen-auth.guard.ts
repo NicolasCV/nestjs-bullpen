@@ -12,10 +12,7 @@ import { ModuleRef } from '@nestjs/core';
 import { timingSafeEqual } from 'crypto';
 import { isObservable, lastValueFrom } from 'rxjs';
 import { BULLPEN_OPTIONS } from '../constants';
-import type {
-  BullpenAuthOptions,
-  BullpenModuleOptions,
-} from '../interfaces/bullpen-options.interface';
+import type { ResolvedAuth, ResolvedBullpenOptions } from '../interfaces/bullpen-options.interface';
 
 @Injectable()
 export class BullpenAuthGuard implements CanActivate {
@@ -23,7 +20,7 @@ export class BullpenAuthGuard implements CanActivate {
   private warnedNoAuth = false;
 
   constructor(
-    @Inject(BULLPEN_OPTIONS) private readonly options: BullpenModuleOptions,
+    @Inject(BULLPEN_OPTIONS) private readonly options: ResolvedBullpenOptions,
     private readonly moduleRef: ModuleRef,
   ) {}
 
@@ -37,7 +34,7 @@ export class BullpenAuthGuard implements CanActivate {
       throw new ForbiddenException('Bullpen is running in read-only mode.');
     }
 
-    const auth: BullpenAuthOptions = this.options.auth ?? { type: 'none' };
+    const auth: ResolvedAuth = this.options.auth ?? { type: 'none' };
     switch (auth.type) {
       case 'none':
         if (!this.warnedNoAuth) {
@@ -55,12 +52,32 @@ export class BullpenAuthGuard implements CanActivate {
         }
         throw new UnauthorizedException();
       case 'guard':
-        return this.delegateToGuard(auth.useGuard, context);
+        return this.runGuards(auth.useGuard, context);
     }
   }
 
+  private async runGuards(
+    guards: Type<CanActivate>[],
+    context: ExecutionContext,
+  ): Promise<boolean> {
+    for (const GuardClass of guards) {
+      let guard: CanActivate;
+      try {
+        guard = this.moduleRef.get(GuardClass, { strict: false });
+      } catch {
+        guard = await this.moduleRef.create(GuardClass);
+      }
+      const outcome = guard.canActivate(context);
+      const passed = isObservable(outcome) ? await lastValueFrom(outcome) : await outcome;
+      if (!passed) {
+        throw new UnauthorizedException();
+      }
+    }
+    return true;
+  }
+
   private async checkBasic(
-    auth: Extract<BullpenAuthOptions, { type: 'basic' }>,
+    auth: Extract<ResolvedAuth, { type: 'basic' }>,
     request: Record<string, any>,
     response: Record<string, any>,
   ): Promise<boolean> {
@@ -80,7 +97,7 @@ export class BullpenAuthGuard implements CanActivate {
   }
 
   private async validateBasic(
-    auth: Extract<BullpenAuthOptions, { type: 'basic' }>,
+    auth: Extract<ResolvedAuth, { type: 'basic' }>,
     username: string,
     password: string,
   ): Promise<boolean> {
@@ -95,24 +112,6 @@ export class BullpenAuthGuard implements CanActivate {
     return list.some(
       (cred) => this.safeEqual(cred.username, username) && this.safeEqual(cred.password, password),
     );
-  }
-
-  private async delegateToGuard(
-    GuardClass: Type<CanActivate>,
-    context: ExecutionContext,
-  ): Promise<boolean> {
-    let guard: CanActivate;
-    try {
-      guard = this.moduleRef.get(GuardClass, { strict: false });
-    } catch {
-      guard = await this.moduleRef.create(GuardClass);
-    }
-    const result = guard.canActivate(context);
-    const resolved = isObservable(result) ? await lastValueFrom(result) : await result;
-    if (!resolved) {
-      throw new UnauthorizedException();
-    }
-    return true;
   }
 
   private safeEqual(a: string, b: string): boolean {

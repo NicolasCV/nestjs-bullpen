@@ -1,17 +1,21 @@
 import { JSX } from 'preact';
-import { JobDetail, JobSummary, QueueSummary } from './api';
+import { useState } from 'preact/hooks';
+import { JobDetail, JobSummary, QueueSummary, QueueTopology } from './api';
 import { duration, pretty, relTime, stateColor } from './format';
 import {
-  BullLogo,
   IconBroom,
-  IconChevron,
   IconClose,
+  IconCpu,
+  IconDownload,
   IconLock,
   IconPause,
   IconPlay,
+  IconPlus,
   IconPromote,
   IconRetry,
+  IconSearch,
   IconTrash,
+  IconWarning,
 } from './icons';
 
 export function Badge({ state }: { state: string }): JSX.Element {
@@ -39,35 +43,107 @@ function StateBar({ counts }: { counts: Record<string, number> }): JSX.Element {
   );
 }
 
-export function Sidebar({
-  queues,
+function QueueCard({
+  queue,
   selected,
   onSelect,
 }: {
-  queues: QueueSummary[];
+  queue: QueueSummary;
   selected: string | null;
   onSelect: (name: string) => void;
 }): JSX.Element {
+  const hasTags = queue.processor || queue.danger || queue.readOnly;
+  return (
+    <button
+      class={`bp-queue${queue.name === selected ? ' active' : ''}`}
+      onClick={() => onSelect(queue.name)}
+      title={queue.description || undefined}
+    >
+      <div class="bp-queue-head">
+        <span class="bp-queue-name">{queue.name}</span>
+        <span class="bp-queue-total">
+          {queue.isPaused ? '⏸ ' : ''}
+          {queue.total}
+        </span>
+      </div>
+      <StateBar counts={queue.counts} />
+      {hasTags ? (
+        <div class="bp-queue-tags">
+          {queue.processor ? (
+            <span
+              class="bp-qtag"
+              title={`Processor: ${queue.processor}${
+                queue.concurrency ? ` · concurrency ${queue.concurrency}` : ''
+              }`}
+            >
+              <IconCpu size={11} />
+              {queue.processor}
+            </span>
+          ) : null}
+          {queue.danger ? (
+            <span class="bp-qtag danger" title="Dangerous queue">
+              <IconWarning size={11} />
+            </span>
+          ) : null}
+          {queue.readOnly ? (
+            <span class="bp-qtag" title="Read-only">
+              <IconLock size={11} />
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </button>
+  );
+}
+
+export function Sidebar({
+  groups,
+  queueCount,
+  selected,
+  onSelect,
+}: {
+  groups: { group: string; items: QueueSummary[] }[];
+  queueCount: number;
+  selected: string | null;
+  onSelect: (name: string) => void;
+}): JSX.Element {
+  const showHeadings = groups.length > 1 || (groups[0] && groups[0].group !== 'Queues');
   return (
     <aside class="bp-sidebar">
-      <div class="bp-sidebar-title">Queues · {queues.length}</div>
-      {queues.map((q) => (
-        <button
-          key={q.name}
-          class={`bp-queue${q.name === selected ? ' active' : ''}`}
-          onClick={() => onSelect(q.name)}
-        >
-          <div class="bp-queue-head">
-            <span class="bp-queue-name">{q.name}</span>
-            <span class="bp-queue-total">
-              {q.isPaused ? '⏸ ' : ''}
-              {q.total}
-            </span>
-          </div>
-          <StateBar counts={q.counts} />
-        </button>
+      <div class="bp-sidebar-title">Queues · {queueCount}</div>
+      {groups.map(({ group, items }) => (
+        <div class="bp-group" key={group}>
+          {showHeadings ? <div class="bp-group-title">{group}</div> : null}
+          {items.map((queue) => (
+            <QueueCard key={queue.name} queue={queue} selected={selected} onSelect={onSelect} />
+          ))}
+        </div>
       ))}
     </aside>
+  );
+}
+
+export function WorkerPanel({ topology }: { topology: QueueTopology | null }): JSX.Element | null {
+  if (!topology || !topology.processor) return null;
+  return (
+    <div class="bp-worker">
+      <span class="bp-worker-item">
+        <IconCpu size={14} />
+        <b>{topology.processor}</b>
+      </span>
+      {topology.concurrency != null ? (
+        <span class="bp-worker-item bp-dim">concurrency {topology.concurrency}</span>
+      ) : null}
+      {topology.events.length ? (
+        <span class="bp-worker-events">
+          {topology.events.map((e) => (
+            <span class="bp-event" key={`${e.scope}:${e.event}:${e.handler}`} title={`${e.handler}()`}>
+              @{e.event}
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -173,6 +249,149 @@ export function JobsTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+export function Toolbar({
+  status,
+  readOnly,
+  busy,
+  onFind,
+  onAdd,
+  onExport,
+  onBulk,
+}: {
+  status: string;
+  readOnly: boolean;
+  busy: boolean;
+  onFind: (id: string) => void;
+  onAdd: () => void;
+  onExport: () => void;
+  onBulk: (action: 'retry' | 'promote') => void;
+}): JSX.Element {
+  const bulk =
+    status === 'failed'
+      ? { label: 'Retry all', action: 'retry' as const }
+      : status === 'delayed'
+        ? { label: 'Promote all', action: 'promote' as const }
+        : null;
+  return (
+    <div class="bp-toolbar2">
+      <form
+        class="bp-find"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = (e.currentTarget as HTMLFormElement).elements.namedItem(
+            'jobid',
+          ) as HTMLInputElement;
+          const value = input.value.trim();
+          if (value) onFind(value);
+        }}
+      >
+        <IconSearch size={15} class="bp-find-icon" />
+        <input name="jobid" class="bp-input" placeholder="Find job by ID…" autocomplete="off" />
+      </form>
+      <div class="bp-toolbar2-actions">
+        {bulk && !readOnly ? (
+          <button class="bp-btn" disabled={busy} onClick={() => onBulk(bulk.action)}>
+            <IconRetry size={15} /> {bulk.label}
+          </button>
+        ) : null}
+        <button class="bp-btn" onClick={onExport}>
+          <IconDownload size={15} /> Export
+        </button>
+        {!readOnly ? (
+          <button class="bp-btn primary" onClick={onAdd}>
+            <IconPlus size={15} /> Add job
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function AddJobModal({
+  queue,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  queue: string;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (payload: { name: string; data: unknown; opts?: Record<string, unknown> }) => void;
+}): JSX.Element {
+  const [name, setName] = useState('job');
+  const [data, setData] = useState('{\n  "example": true\n}');
+  const [opts, setOpts] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = () => {
+    let parsedData: unknown;
+    let parsedOpts: Record<string, unknown> | undefined;
+    try {
+      parsedData = data.trim() ? JSON.parse(data) : {};
+    } catch {
+      setErr('Data is not valid JSON');
+      return;
+    }
+    try {
+      parsedOpts = opts.trim() ? JSON.parse(opts) : undefined;
+    } catch {
+      setErr('Options are not valid JSON');
+      return;
+    }
+    onSubmit({ name: name || 'job', data: parsedData, opts: parsedOpts });
+  };
+
+  return (
+    <>
+      <div class="bp-overlay" onClick={onClose} />
+      <div class="bp-modal" role="dialog" aria-modal="true">
+        <div class="bp-drawer-head">
+          <div class="bp-drawer-title">Add job · {queue}</div>
+          <button class="bp-icon-btn" onClick={onClose} title="Close">
+            <IconClose size={18} />
+          </button>
+        </div>
+        <div class="bp-drawer-body">
+          {err ? <div class="bp-banner">{err}</div> : null}
+          <div class="bp-field">
+            <label>Name</label>
+            <input
+              class="bp-input wide"
+              value={name}
+              onInput={(e) => setName((e.target as HTMLInputElement).value)}
+            />
+          </div>
+          <div class="bp-field">
+            <label>Data (JSON)</label>
+            <textarea
+              class="bp-textarea"
+              value={data}
+              onInput={(e) => setData((e.target as HTMLTextAreaElement).value)}
+            />
+          </div>
+          <div class="bp-field">
+            <label>Options (JSON, optional)</label>
+            <textarea
+              class="bp-textarea"
+              value={opts}
+              placeholder={'{ "delay": 5000, "priority": 1 }'}
+              onInput={(e) => setOpts((e.target as HTMLTextAreaElement).value)}
+            />
+          </div>
+        </div>
+        <div class="bp-drawer-actions">
+          <button class="bp-btn primary" disabled={busy} onClick={submit}>
+            <IconPlus size={15} /> Add job
+          </button>
+          <button class="bp-btn" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -323,5 +542,3 @@ export function JobDrawer({
     </>
   );
 }
-
-export { BullLogo, IconChevron };

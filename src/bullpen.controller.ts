@@ -2,22 +2,28 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   Inject,
+  NotFoundException,
   Param,
   Post,
   Query,
   Req,
+  Sse,
   UseGuards,
 } from '@nestjs/common';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { Observable, from, interval, map, startWith, switchMap } from 'rxjs';
 import { BullpenAuthGuard } from './auth/bullpen-auth.guard';
 import { BULLPEN_OPTIONS, DEFAULT_TITLE, JOB_STATUSES, JobStatus } from './constants';
-import type { BullpenModuleOptions } from './interfaces/bullpen-options.interface';
+import type { ResolvedBullpenOptions } from './interfaces/bullpen-options.interface';
+import type { QueueSummary } from './interfaces/dto.interface';
 import { QueueActionsService } from './services/queue-actions.service';
 import { QueueDiscoveryService } from './services/queue-discovery.service';
+import { QueueTopologyService } from './services/queue-topology.service';
 
 @UseGuards(BullpenAuthGuard)
 @Controller()
@@ -27,7 +33,8 @@ export class BullpenController {
   constructor(
     private readonly actions: QueueActionsService,
     private readonly discovery: QueueDiscoveryService,
-    @Inject(BULLPEN_OPTIONS) private readonly options: BullpenModuleOptions,
+    private readonly topology: QueueTopologyService,
+    @Inject(BULLPEN_OPTIONS) private readonly options: ResolvedBullpenOptions,
   ) {}
 
   @Get()
@@ -42,19 +49,28 @@ export class BullpenController {
       title: this.options.title ?? DEFAULT_TITLE,
       theme: this.options.theme ?? 'dark',
       readOnly: Boolean(this.options.readOnly),
+      live: true,
       queues: this.discovery.getQueueNames(),
       statuses: JOB_STATUSES,
     };
   }
 
   @Get('api/queues')
-  listQueues() {
-    return this.actions.listQueues();
+  listQueues(): Promise<QueueSummary[]> {
+    return this.enrichedQueues();
   }
 
   @Get('api/queues/:name')
-  queueSummary(@Param('name') name: string) {
-    return this.actions.getQueueSummary(name);
+  async queueSummary(@Param('name') name: string): Promise<QueueSummary> {
+    return this.enrich(await this.actions.getQueueSummary(name));
+  }
+
+  @Get('api/queues/:name/topology')
+  topologyFor(@Param('name') name: string) {
+    if (!this.discovery.getQueue(name)) {
+      throw new NotFoundException(`Queue "${name}" not found`);
+    }
+    return this.topology.getTopology(name);
   }
 
   @Get('api/queues/:name/jobs')
@@ -77,30 +93,35 @@ export class BullpenController {
 
   @Post('api/queues/:name/jobs/:id/retry')
   async retry(@Param('name') name: string, @Param('id') id: string) {
+    this.assertWritable(name);
     await this.actions.retryJob(name, id);
     return { ok: true };
   }
 
   @Post('api/queues/:name/jobs/:id/promote')
   async promote(@Param('name') name: string, @Param('id') id: string) {
+    this.assertWritable(name);
     await this.actions.promoteJob(name, id);
     return { ok: true };
   }
 
   @Delete('api/queues/:name/jobs/:id')
   async remove(@Param('name') name: string, @Param('id') id: string) {
+    this.assertWritable(name);
     await this.actions.removeJob(name, id);
     return { ok: true };
   }
 
   @Post('api/queues/:name/pause')
   async pause(@Param('name') name: string) {
+    this.assertWritable(name);
     await this.actions.pauseQueue(name);
     return { ok: true };
   }
 
   @Post('api/queues/:name/resume')
   async resume(@Param('name') name: string) {
+    this.assertWritable(name);
     await this.actions.resumeQueue(name);
     return { ok: true };
   }
@@ -110,6 +131,7 @@ export class BullpenController {
     @Param('name') name: string,
     @Body() body: { status?: string; grace?: number; limit?: number } = {},
   ) {
+    this.assertWritable(name);
     const removed = await this.actions.cleanQueue(
       name,
       this.resolveStatus(body.status),
@@ -119,10 +141,77 @@ export class BullpenController {
     return { ok: true, removed };
   }
 
+  @Post('api/queues/:name/jobs')
+  async addJob(
+    @Param('name') name: string,
+    @Body() body: { name?: string; data?: unknown; opts?: Record<string, unknown> } = {},
+  ) {
+    this.assertWritable(name);
+    return { ok: true, ...(await this.actions.addJob(name, body.name ?? 'job', body.data, body.opts)) };
+  }
+
+  @Get('api/queues/:name/export')
+  exportJobs(
+    @Param('name') name: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.actions.exportJobs(name, this.resolveStatus(status), clampInt(limit, 1000, 1, 5000));
+  }
+
+  @Post('api/queues/:name/bulk')
+  async bulk(
+    @Param('name') name: string,
+    @Body() body: { action?: 'retry' | 'promote'; status?: string; limit?: number } = {},
+  ) {
+    this.assertWritable(name);
+    const result = await this.actions.bulkAction(
+      name,
+      body.action === 'promote' ? 'promote' : 'retry',
+      this.resolveStatus(body.status),
+      typeof body.limit === 'number' ? body.limit : 1000,
+    );
+    return { ok: true, ...result };
+  }
+
+  @Sse('api/stream')
+  stream(): Observable<{ data: string }> {
+    return interval(2000).pipe(
+      startWith(0),
+      switchMap(() => from(this.enrichedQueues())),
+      map((queues) => ({ data: JSON.stringify(queues) })),
+    );
+  }
+
+  private async enrichedQueues(): Promise<QueueSummary[]> {
+    const summaries = await this.actions.listQueues();
+    return summaries.map((summary) => this.enrich(summary));
+  }
+
+  private enrich(summary: QueueSummary): QueueSummary {
+    const topology = this.topology.getTopology(summary.name);
+    const meta = { ...this.options.queues?.[summary.name], ...topology.meta };
+    return {
+      ...summary,
+      group: meta.group ?? null,
+      description: meta.description ?? null,
+      readOnly: Boolean(meta.readOnly),
+      danger: Boolean(meta.danger),
+      processor: topology.processor,
+      concurrency: topology.concurrency,
+    };
+  }
+
+  private assertWritable(name: string): void {
+    if (this.topology.getMeta(name).readOnly) {
+      throw new ForbiddenException(`Queue "${name}" is read-only.`);
+    }
+  }
+
   private resolveStatus(status?: string): JobStatus {
     return (JOB_STATUSES as readonly string[]).includes(status ?? '')
       ? (status as JobStatus)
-      : 'waiting';
+      : (JOB_STATUSES[1] as JobStatus);
   }
 
   private computeBasePath(request: Record<string, any>): string {

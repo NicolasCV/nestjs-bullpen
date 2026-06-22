@@ -1,8 +1,25 @@
+import type { BullpenQueueOptions } from './bullpen-options.interface';
+
 export interface QueueSummary {
   name: string;
   counts: Record<string, number>;
   total: number;
   isPaused: boolean;
+  /** v0.2 presentation enrichment (from `@BullpenQueue` / `queues` option). */
+  group?: string | null;
+  description?: string | null;
+  readOnly?: boolean;
+  danger?: boolean;
+  /** v0.2 NestJS topology. */
+  processor?: string | null;
+  concurrency?: number | null;
+}
+
+export interface QueueTopology {
+  processor: string | null;
+  concurrency: number | null;
+  events: { scope: 'worker' | 'queue'; event: string; handler: string }[];
+  meta: BullpenQueueOptions;
 }
 
 export interface JobSummary {

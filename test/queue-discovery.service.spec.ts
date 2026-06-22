@@ -17,7 +17,7 @@ describe('QueueDiscoveryService', () => {
       undefined,
       'a string',
     ]);
-    const service = new QueueDiscoveryService(discovery, {});
+    const service = new QueueDiscoveryService(discovery, {} as any);
     service.onApplicationBootstrap();
     expect(service.getQueueNames()).toEqual(['emails', 'media']);
     expect(service.getQueue('emails')).toBeDefined();
@@ -26,14 +26,14 @@ describe('QueueDiscoveryService', () => {
 
   it('respects the include allow-list', () => {
     const discovery = discoveryWith([fakeQueue('emails'), fakeQueue('media')]);
-    const service = new QueueDiscoveryService(discovery, { include: ['emails'] });
+    const service = new QueueDiscoveryService(discovery, { include: ['emails'] } as any);
     service.onApplicationBootstrap();
     expect(service.getQueueNames()).toEqual(['emails']);
   });
 
   it('respects the exclude deny-list', () => {
     const discovery = discoveryWith([fakeQueue('emails'), fakeQueue('media')]);
-    const service = new QueueDiscoveryService(discovery, { exclude: ['media'] });
+    const service = new QueueDiscoveryService(discovery, { exclude: ['media'] } as any);
     service.onApplicationBootstrap();
     expect(service.getQueueNames()).toEqual(['emails']);
   });
@@ -45,7 +45,7 @@ describe('QueueDiscoveryService', () => {
       },
     };
     const discovery = { getProviders: () => [throwing, { instance: fakeQueue('ok') }] } as any;
-    const service = new QueueDiscoveryService(discovery, {});
+    const service = new QueueDiscoveryService(discovery, {} as any);
     expect(() => service.onApplicationBootstrap()).not.toThrow();
     expect(service.getQueueNames()).toEqual(['ok']);
   });

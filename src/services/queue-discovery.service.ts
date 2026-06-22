@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/comm
 import { DiscoveryService } from '@nestjs/core';
 import { Queue } from 'bullmq';
 import { BULLPEN_OPTIONS } from '../constants';
-import type { BullpenModuleOptions } from '../interfaces/bullpen-options.interface';
+import type { ResolvedBullpenOptions } from '../interfaces/bullpen-options.interface';
 
 @Injectable()
 export class QueueDiscoveryService implements OnApplicationBootstrap {
@@ -11,7 +11,7 @@ export class QueueDiscoveryService implements OnApplicationBootstrap {
 
   constructor(
     private readonly discovery: DiscoveryService,
-    @Inject(BULLPEN_OPTIONS) private readonly options: BullpenModuleOptions,
+    @Inject(BULLPEN_OPTIONS) private readonly options: ResolvedBullpenOptions,
   ) {}
 
   onApplicationBootstrap(): void {

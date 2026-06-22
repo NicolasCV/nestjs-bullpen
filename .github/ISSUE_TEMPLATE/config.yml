@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/NicolasCV/nestjs-bullpen/tree/main/docs
+    about: Setup, configuration, auth, scaling, and more.
+  - name: Question or discussion
+    url: https://github.com/NicolasCV/nestjs-bullpen/discussions
+    about: Ask a question or share an idea before filing an issue.

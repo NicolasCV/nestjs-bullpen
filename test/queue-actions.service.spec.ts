@@ -35,6 +35,7 @@ function fakeQueue() {
     pause: jest.fn().mockResolvedValue(undefined),
     resume: jest.fn().mockResolvedValue(undefined),
     clean: jest.fn().mockResolvedValue(['a', 'b']),
+    add: jest.fn().mockResolvedValue({ id: 'new-1', name: 'welcome' }),
   };
 }
 
@@ -98,5 +99,27 @@ describe('QueueActionsService', () => {
     const removed = await service.cleanQueue('emails', 'completed', 0, 1000);
     expect(removed).toBe(2);
     expect(queue.clean).toHaveBeenCalledWith(0, 1000, 'completed');
+  });
+
+  it('adds (makes) a job', async () => {
+    const { service, queue } = makeService();
+    const result = await service.addJob('emails', 'welcome', { to: 'a' }, { delay: 1000 });
+    expect(queue.add).toHaveBeenCalledWith('welcome', { to: 'a' }, { delay: 1000 });
+    expect(result).toEqual({ id: 'new-1', name: 'welcome' });
+  });
+
+  it('exports (extracts) jobs with payloads and a cap flag', async () => {
+    const { service } = makeService();
+    const result = await service.exportJobs('emails', 'failed', 50);
+    expect(result.count).toBe(1);
+    expect(result.capped).toBe(false);
+    expect(result.jobs[0]).toMatchObject({ id: '1', data: { to: 'a@b.c' } });
+  });
+
+  it('bulk-processes a state and reports the count', async () => {
+    const { service } = makeService();
+    const result = await service.bulkAction('emails', 'retry', 'failed', 100);
+    expect(result.processed).toBe(1);
+    expect(result.capped).toBe(false);
   });
 });

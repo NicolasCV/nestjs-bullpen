@@ -1,36 +1,62 @@
 import type { CanActivate, Type } from '@nestjs/common';
+import type { BullpenAuthType } from '../constants';
 
 export interface BasicAuthCredentials {
   username: string;
   password: string;
 }
 
+export type GuardClass = Type<CanActivate>;
+export type GuardOrGuards = GuardClass | GuardClass[];
+
 /**
- * Authentication strategy for the dashboard. Pick the one that matches your app —
- * a built-in basic prompt, any existing NestJS guard (JWT/session/...), or a custom predicate.
+ * Authentication strategy. Use the built-in basic prompt, delegate to any existing NestJS
+ * guard(s), or supply a custom predicate. `type` accepts the `BullpenAuthType` enum or its string.
  */
 export type BullpenAuthOptions =
-  | { type: 'none' }
+  | { type: BullpenAuthType.None | 'none' }
   | {
-      type: 'basic';
+      type: BullpenAuthType.Basic | 'basic';
       credentials?: BasicAuthCredentials | BasicAuthCredentials[];
       validate?: (username: string, password: string) => boolean | Promise<boolean>;
       realm?: string;
     }
-  | { type: 'guard'; useGuard: Type<CanActivate> }
-  | { type: 'custom'; authorize: (request: unknown) => boolean | Promise<boolean> };
+  | {
+      type: BullpenAuthType.Guard | 'guard';
+      /** One guard or a chain (all must pass). */
+      useGuard: GuardOrGuards;
+      /** Metadata attached to the dashboard controller so reflector guards (e.g. RolesGuard) resolve, e.g. `{ roles: ['admin'] }`. */
+      metadata?: Record<string, unknown>;
+    }
+  | {
+      type: BullpenAuthType.Custom | 'custom';
+      authorize: (request: unknown) => boolean | Promise<boolean>;
+    };
+
+/** Per-queue presentation, set via `@BullpenQueue()` or the `queues` option map. */
+export interface BullpenQueueOptions {
+  description?: string;
+  group?: string;
+  readOnly?: boolean;
+  danger?: boolean;
+}
 
 export interface BullpenModuleOptions {
   /** Mount path for the dashboard. Default: `/bullpen`. */
   route?: string;
-  /** Auth strategy. Default: `{ type: 'none' }` (logs a dev-only warning). */
-  auth?: BullpenAuthOptions;
+  /**
+   * Authentication. Pass a guard class (or array) directly for the quickest setup, or a full
+   * `BullpenAuthOptions` object. Default: no auth (logs a dev-only warning).
+   */
+  auth?: BullpenAuthOptions | GuardOrGuards;
   /** Block every mutating endpoint (retry/remove/promote/pause/resume/clean) with 403. Default: `false`. */
   readOnly?: boolean;
   /** Only expose these queues (by name). Default: every discovered queue. */
   include?: string[];
   /** Hide these queues (by name). */
   exclude?: string[];
+  /** Per-queue presentation for queues without a `@BullpenQueue()`-decorated processor. */
+  queues?: Record<string, BullpenQueueOptions>;
   /** Dashboard title. Default: `Bullpen`. */
   title?: string;
   /** Default UI theme. Default: `dark`. */
@@ -43,4 +69,22 @@ export interface BullpenModuleAsyncOptions {
   imports?: any[];
   inject?: any[];
   useFactory: (...args: any[]) => BullpenModuleOptions | Promise<BullpenModuleOptions>;
+}
+
+/** Internal canonical auth shape consumed by the guard after the module normalizes user input. */
+export type ResolvedAuth =
+  | { type: 'none' }
+  | {
+      type: 'basic';
+      credentials?: BasicAuthCredentials | BasicAuthCredentials[];
+      validate?: (username: string, password: string) => boolean | Promise<boolean>;
+      realm?: string;
+    }
+  | { type: 'guard'; useGuard: GuardClass[]; metadata?: Record<string, unknown> }
+  | { type: 'custom'; authorize: (request: unknown) => boolean | Promise<boolean> };
+
+/** Options after the module has normalized `auth`. Stored under the BULLPEN_OPTIONS token. */
+export interface ResolvedBullpenOptions extends Omit<BullpenModuleOptions, 'auth'> {
+  route: string;
+  auth: ResolvedAuth;
 }

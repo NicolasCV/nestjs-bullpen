@@ -1,15 +1,28 @@
 {
   "name": "nestjs-bullpen",
-  "version": "0.1.0",
-  "description": "Bullpen — a lightweight, dark-mode-first, NestJS-native BullMQ dashboard. Auto-discovers your queues, works on Express & Fastify, pluggable auth, one-line setup.",
+  "version": "0.2.0",
+  "description": "The NestJS-native BullMQ dashboard. Auto-discovers your queues, shows the processors behind them, runs on Express and Fastify, pluggable auth, zero runtime dependencies.",
   "keywords": [
+    "bullmq dashboard",
+    "nestjs bullmq",
+    "nestjs bullmq dashboard",
+    "bullmq ui",
+    "bullmq board",
+    "bullmq monitor",
+    "bullmq admin",
+    "bull board",
+    "bull dashboard",
+    "nestjs dashboard",
+    "nestjs queue dashboard",
+    "nestjs queue",
+    "redis queue dashboard",
+    "queue dashboard",
     "nestjs",
     "nest",
     "bullmq",
     "bull",
     "dashboard",
     "queue",
-    "queues",
     "ui",
     "board",
     "monitor",
@@ -37,6 +50,12 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rimraf dist",
     "build:lib": "tsc -p tsconfig.build.json",

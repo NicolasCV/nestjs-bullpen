@@ -7,7 +7,7 @@ function ctx(req: any, res: any = {}): ExecutionContext {
 }
 
 function makeGuard(options: BullpenModuleOptions, moduleRef: any = {}) {
-  return new BullpenAuthGuard(options, moduleRef);
+  return new BullpenAuthGuard(options as any, moduleRef);
 }
 
 const basic = (u: string, p: string) => 'Basic ' + Buffer.from(`${u}:${p}`).toString('base64');
@@ -82,7 +82,7 @@ describe('BullpenAuthGuard', () => {
       }
     }
     const moduleRef = { get: jest.fn(() => new JwtGuard()), create: jest.fn() };
-    const guard = makeGuard({ auth: { type: 'guard', useGuard: JwtGuard as any } }, moduleRef);
+    const guard = makeGuard({ auth: { type: 'guard', useGuard: [JwtGuard] } as any }, moduleRef);
     await expect(guard.canActivate(ctx({ method: 'GET', headers: {} }))).resolves.toBe(true);
     expect(moduleRef.get).toHaveBeenCalledWith(JwtGuard, { strict: false });
   });
@@ -94,7 +94,7 @@ describe('BullpenAuthGuard', () => {
       }
     }
     const moduleRef = { get: jest.fn(() => new DenyGuard()), create: jest.fn() };
-    const guard = makeGuard({ auth: { type: 'guard', useGuard: DenyGuard as any } }, moduleRef);
+    const guard = makeGuard({ auth: { type: 'guard', useGuard: [DenyGuard] } as any }, moduleRef);
     await expect(guard.canActivate(ctx({ method: 'GET', headers: {} }))).rejects.toBeInstanceOf(
       UnauthorizedException,
     );

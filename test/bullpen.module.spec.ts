@@ -24,6 +24,6 @@ describe('BullpenModule', () => {
     const dm = BullpenModule.forRootAsync({ route: '/q', useFactory: () => ({ readOnly: true }) });
     expect(Reflect.getMetadata(PATH_METADATA, BullpenController)).toBe('/q');
     const resolved = await optionProvider(dm).useFactory();
-    expect(resolved).toEqual({ readOnly: true, route: '/q' });
+    expect(resolved).toEqual({ readOnly: true, route: '/q', auth: { type: 'none' } });
   });
 });
