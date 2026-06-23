@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🐂 Bullpen
+<img src="https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/logo.png" alt="Bullpen" width="128" />
+
+# Bullpen
 
 **A NestJS-native dashboard for [BullMQ](https://docs.bullmq.io).** One line to mount, no per-queue wiring, and it actually understands your NestJS app.
 
