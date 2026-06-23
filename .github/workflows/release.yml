@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Version bump level
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+# Avoid overlapping releases.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Pick the bump from the workflow input, or from the triggering commit message
+      # ([major] / [minor]), defaulting to patch.
+      - name: Determine bump level
+        id: bump
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            LEVEL="${{ github.event.inputs.level }}"
+          else
+            MSG="$(git log -1 --pretty=%B)"
+            if echo "$MSG" | grep -qiE '\[major\]'; then LEVEL=major
+            elif echo "$MSG" | grep -qiE '\[minor\]'; then LEVEL=minor
+            else LEVEL=patch
+            fi
+          fi
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+          echo "Bumping: $LEVEL"
+
+      # The [skip ci] in the release commit stops this push from re-triggering the workflow.
+      - name: Bump version
+        run: npm version ${{ steps.bump.outputs.level }} -m "release: v%s [skip ci]"
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push commit and tag
+        run: git push --follow-tags

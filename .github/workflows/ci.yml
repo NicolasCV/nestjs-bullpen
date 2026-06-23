@@ -1,8 +1,9 @@
 name: CI
 
+# PRs and feature branches. Pushes to main are handled by release.yml (build + test + publish).
 on:
   push:
-    branches: [main]
+    branches-ignore: [main]
   pull_request:
 
 jobs:
