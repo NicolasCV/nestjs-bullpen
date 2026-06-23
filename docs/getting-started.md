@@ -25,7 +25,7 @@ import { BullpenModule } from 'nestjs-bullpen';
 export class AppModule {}
 ```
 
-Open `http://localhost:3000/bullpen`. Both queues show up automatically — there is no per-queue registration step.
+Open `<your-app-url>/bullpen`. Both queues show up automatically, with no per-queue registration step.
 
 ## Add a route and auth
 

@@ -8,9 +8,10 @@
 
 [![CI](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
-[![downloads](https://img.shields.io/npm/dm/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
-[![zero deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](#small-and-staying-that-way)
-[![license](https://img.shields.io/npm/l/nestjs-bullpen.svg)](./LICENSE)
+[![install size](https://packagephobia.com/badge?p=nestjs-bullpen)](https://packagephobia.com/result?p=nestjs-bullpen)
+[![runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](#small-and-staying-that-way)
+[![UI bundle](https://img.shields.io/badge/UI-~16%20kB%20gzip-brightgreen.svg)](#small-and-staying-that-way)
+[![license](https://img.shields.io/github/license/NicolasCV/nestjs-bullpen.svg)](./LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-E0234E.svg)](./CONTRIBUTING.md)
 
 ![Bullpen dashboard](https://raw.githubusercontent.com/NicolasCV/nestjs-bullpen/main/assets/bullpen-dark.png)
@@ -44,13 +45,15 @@ import { BullpenModule } from 'nestjs-bullpen';
 export class AppModule {}
 ```
 
-Open `http://localhost:3000/bullpen`. Want a route and auth? Same options object:
+Open `<your-app-url>/bullpen`. Want a route and auth? Same options object:
 
 ```ts
 BullpenModule.forRoot({ route: '/admin/queues', auth: JwtAuthGuard });
 ```
 
-That `auth: JwtAuthGuard` is the whole setup. Any guard you already use works. See [the auth docs](./docs/authentication.md) for basic, custom, roles, and read-only.
+That `auth: JwtAuthGuard` is the whole setup. Any guard you already use works. See [the auth docs](./docs/authentication.md) for basic, custom, and roles.
+
+The dashboard is **read-only by default**. To enable retry/remove/add and the other mutations, opt in with `writable: true`.
 
 ## What you get
 
@@ -59,7 +62,7 @@ That `auth: JwtAuthGuard` is the whole setup. Any guard you already use works. S
 - **Runs anywhere NestJS does.** It's a controller plus a guard, so Express and Fastify both work with no adapter packages.
 - **Built for big deployments.** Range-based pagination, counts that never fetch jobs, find-by-id, plus exports and bulk actions that are capped and tell you when they hit the cap. ([scaling](./docs/scaling.md))
 - **Real-time.** Live counts over SSE, falling back to polling when the auth mode can't stream.
-- **Job management.** Retry, promote, remove, pause/resume, clean, add jobs, and export to JSON, with an optional per-queue read-only lock.
+- **Job management, opt-in.** Retry, promote, remove, pause/resume, clean, add jobs, export to JSON. Off by default (set `writable: true`), with an optional per-queue read-only lock.
 - **Dark-first UI** shipped as one self-contained file. No CDN calls and no web-font downloads.
 
 ## Small, and staying that way
@@ -71,21 +74,6 @@ Lightweight isn't a tagline here. It's a project rule, checked on every build. C
 | Runtime dependencies | **0** (everything is a peer dep) |
 | UI bundle | one self-contained file, **~16 KB gzipped** |
 | Published package | **~32 KB** |
-
-## Bullpen vs bull-board
-
-[bull-board](https://github.com/felixmosh/bull-board) is excellent and more battle-tested. Bullpen makes a different bet: go all-in on NestJS.
-
-| | Bullpen | bull-board (+ `@bull-board/nestjs`) |
-| --- | --- | --- |
-| Setup | `forRoot()`, auto-discovers queues | register each queue with `forFeature` |
-| Express and Fastify | one build, no adapters | install the matching adapter |
-| Shows processor / concurrency / events | yes | no |
-| Auth built in | guard / basic / custom | guard the route yourself |
-| Live updates | SSE, polling fallback | polling |
-| Runtime dependencies | 0 | a few |
-
-If you want a framework-agnostic board, use bull-board. If you live in NestJS, Bullpen should feel like it belongs.
 
 ## Documentation
 

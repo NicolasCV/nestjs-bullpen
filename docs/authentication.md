@@ -1,6 +1,6 @@
 # Authentication
 
-Bullpen is guarded by a single `CanActivate`. There are four ways to configure it, plus a read-only switch.
+Bullpen is guarded by a single `CanActivate`. There are four ways to configure it. Mutations are also off by default (see [read-only](#read-only-by-default)).
 
 ## Quickest: hand it a guard
 
@@ -45,8 +45,8 @@ BullpenModule.forRoot({
 
 The default. Bullpen logs a warning at startup; don't ship it.
 
-## Read-only
+## Read-only by default
 
-`readOnly: true` blocks every mutation (retry/remove/promote/pause/resume/clean/add) with a 403, app-wide. You can also make a single queue read-only with `@BullpenQueue({ readOnly: true })` or the `queues` map.
+The dashboard does not allow mutations until you opt in. Every mutating endpoint (retry/remove/promote/pause/resume/clean/add) returns 403 and the write controls are hidden in the UI unless you set `writable: true` in `forRoot`. Even with writes enabled, you can lock individual queues with `@BullpenQueue({ readOnly: true })` or the `queues` map.
 
 > Note on real-time updates: the live stream uses `EventSource`, which can't send custom headers. With header/token guards the stream falls back to polling automatically — counts stay live either way.

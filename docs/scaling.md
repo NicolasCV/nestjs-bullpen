@@ -19,6 +19,8 @@ The toolbar above the job table gives you:
 - **Retry all / Promote all** — bulk-process the visible state.
 - **Clean** — remove a whole state (uses BullMQ's `clean`).
 
+Find and Export are reads and always available. Add, Retry/Promote all, and Clean are mutations, so they only show up when you set `writable: true` (see [authentication](./authentication.md)).
+
 ## Caps (and why they're loud)
 
 Export and bulk operations are capped so a single click can't try to pull or mutate millions of jobs:

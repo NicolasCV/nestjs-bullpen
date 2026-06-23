@@ -30,8 +30,8 @@ export class BullpenAuthGuard implements CanActivate {
     const response = http.getResponse<Record<string, any>>();
 
     const method = String(request.method ?? 'GET').toUpperCase();
-    if (this.options.readOnly && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-      throw new ForbiddenException('Bullpen is running in read-only mode.');
+    if (!this.options.writable && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      throw new ForbiddenException('Bullpen is read-only. Set `writable: true` to enable mutations.');
     }
 
     const auth: ResolvedAuth = this.options.auth ?? { type: 'none' };

@@ -6,7 +6,7 @@
 | ---------- | ------------------------------------- | ---------- | ------------------------------------------------------ |
 | `route`    | `string`                              | `/bullpen` | Where the dashboard mounts.                            |
 | `auth`     | guard / guard[] / `BullpenAuthOptions`| no auth    | See [authentication](./authentication.md).             |
-| `readOnly` | `boolean`                             | `false`    | Blocks every mutation with 403.                        |
+| `writable` | `boolean`                             | `false`    | Enable mutations (retry/remove/add/...); read-only until set. |
 | `include`  | `string[]`                            | all        | Whitelist queues by name.                              |
 | `exclude`  | `string[]`                            | —          | Hide queues by name.                                   |
 | `queues`   | `Record<string, BullpenQueueOptions>` | —          | Per-queue presentation for queues without a processor. |
@@ -23,7 +23,7 @@ BullpenModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => ({
-    readOnly: config.get('NODE_ENV') === 'production',
+    writable: config.get('NODE_ENV') !== 'production', // mutations off in prod
     auth: { type: 'basic', credentials: { username: 'admin', password: config.get('BULLPEN_PASS') } },
   }),
 });

@@ -18,12 +18,15 @@ describe('BullpenAuthGuard', () => {
     await expect(guard.canActivate(ctx({ method: 'GET', headers: {} }))).resolves.toBe(true);
   });
 
-  it('blocks mutations in read-only mode but allows reads', async () => {
-    const guard = makeGuard({ readOnly: true, auth: { type: 'none' } });
+  it('blocks mutations unless writable, and always allows reads', async () => {
+    const guard = makeGuard({ auth: { type: 'none' } }); // writable defaults to false
     await expect(guard.canActivate(ctx({ method: 'POST', headers: {} }))).rejects.toBeInstanceOf(
       ForbiddenException,
     );
     await expect(guard.canActivate(ctx({ method: 'GET', headers: {} }))).resolves.toBe(true);
+
+    const writable = makeGuard({ writable: true, auth: { type: 'none' } });
+    await expect(writable.canActivate(ctx({ method: 'POST', headers: {} }))).resolves.toBe(true);
   });
 
   describe('basic auth', () => {

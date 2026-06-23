@@ -21,9 +21,9 @@ describe('BullpenModule', () => {
   });
 
   it('forRootAsync exposes an async options factory and pins the route', async () => {
-    const dm = BullpenModule.forRootAsync({ route: '/q', useFactory: () => ({ readOnly: true }) });
+    const dm = BullpenModule.forRootAsync({ route: '/q', useFactory: () => ({ writable: true }) });
     expect(Reflect.getMetadata(PATH_METADATA, BullpenController)).toBe('/q');
     const resolved = await optionProvider(dm).useFactory();
-    expect(resolved).toEqual({ readOnly: true, route: '/q', auth: { type: 'none' } });
+    expect(resolved).toEqual({ writable: true, route: '/q', auth: { type: 'none' } });
   });
 });

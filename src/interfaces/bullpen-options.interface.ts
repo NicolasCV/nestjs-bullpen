@@ -52,8 +52,12 @@ export interface BullpenModuleOptions {
    * `BullpenAuthOptions` object. Default: no auth (logs a dev-only warning).
    */
   auth?: BullpenAuthOptions | GuardOrGuards;
-  /** Block every mutating endpoint (retry/remove/promote/pause/resume/clean) with 403. Default: `false`. */
-  readOnly?: boolean;
+  /**
+   * Enable mutating endpoints (retry/remove/promote/pause/resume/clean/add job). Off by default:
+   * the dashboard is read-only until you opt in. When false, write controls are hidden in the UI
+   * and the API rejects mutations with 403.
+   */
+  writable?: boolean;
   /** Only expose these queues (by name). Default: every discovered queue. */
   include?: string[];
   /** Hide these queues (by name). */

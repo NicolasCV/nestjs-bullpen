@@ -28,6 +28,9 @@ import { connection } from './redis';
       title: 'Bullpen Demo',
       theme: 'dark',
       auth: { type: 'basic', credentials: { username: 'admin', password: 'admin' } },
+      // Writes are off by default; opt in to enable retry/remove/add/etc. ('reports' stays read-only below).
+      // Toggle with BULLPEN_WRITABLE=false to see the read-only dashboard.
+      writable: process.env.BULLPEN_WRITABLE !== 'false',
       // Default options Bullpen applies to jobs added from the dashboard (per-queue can override).
       defaultJobOptions: { removeOnComplete: { count: 500 } },
       // 'reports' has no processor class, so enrich it here instead of with @BullpenQueue.

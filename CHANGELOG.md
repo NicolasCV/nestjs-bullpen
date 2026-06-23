@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- **Writes are now opt-in (breaking).** The dashboard is read-only by default; set `writable: true` in `forRoot` to enable mutations (retry/remove/promote/pause/resume/clean/add). When off, the write controls are hidden and the API returns 403. This replaces the old `readOnly` option. Per-queue `@BullpenQueue({ readOnly: true })` still locks individual queues.
+- Logo added; README size/install badges; license badge reads from GitHub. Removed the bull-board comparison from the README.
+
 ## 0.2.0
 
 First public release.

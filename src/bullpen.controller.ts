@@ -48,7 +48,7 @@ export class BullpenController {
     return {
       title: this.options.title ?? DEFAULT_TITLE,
       theme: this.options.theme ?? 'dark',
-      readOnly: Boolean(this.options.readOnly),
+      readOnly: !this.options.writable,
       live: true,
       queues: this.discovery.getQueueNames(),
       statuses: JOB_STATUSES,
@@ -211,6 +211,9 @@ export class BullpenController {
   }
 
   private assertWritable(name: string): void {
+    if (!this.options.writable) {
+      throw new ForbiddenException('Bullpen is read-only. Set `writable: true` to enable mutations.');
+    }
     if (this.topology.getMeta(name).readOnly) {
       throw new ForbiddenException(`Queue "${name}" is read-only.`);
     }
@@ -232,7 +235,7 @@ export class BullpenController {
       basePath,
       title: this.options.title ?? DEFAULT_TITLE,
       theme: this.options.theme ?? 'dark',
-      readOnly: Boolean(this.options.readOnly),
+      readOnly: !this.options.writable,
       statuses: JOB_STATUSES,
     };
     const snippet = `<script>window.__BULLPEN__=${JSON.stringify(config).replace(
