@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0
+
+Stable release. The public surface is now settled and follows semver: `BullpenModule.forRoot` / `forRootAsync` and the `auth`, `writable`, `route`, `queues`, `include` / `exclude`, and `defaultJobOptions` options; the `@BullpenQueue` decorator; the exported guard, services, enums, and types. No breaking changes from 0.4.x. Still zero runtime dependencies, still a single self-contained UI, still Express and Fastify.
+
+## 0.4.1
+
+- Fixed the install-size badge. packagephobia was rate-limiting its badge endpoint, so the README switched to badgen.
+
+## 0.4.0
+
+- Page-jump input and page-size selector for large queues. The job list stays range-based (`page` and `pageSize` map to a Redis range), so it is safe on queues with very large job counts.
+- Docs: a copy-paste JWT plus RolesGuard recipe that uses the `metadata: { roles }` pass-through.
+
 ## 0.3.0
 
 - **Served as middleware, not a controller (isolation).** Bullpen now runs before the host app's global interceptors and guards. Responses are always raw HTML/JSON (never wrapped by a response interceptor), and the dashboard is protected only by its own configured guard, never your app-wide guards. Still platform-agnostic (Express and Fastify).
