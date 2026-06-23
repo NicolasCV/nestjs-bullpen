@@ -33,6 +33,8 @@ function downloadJson(filename: string, data: unknown): void {
 export function App() {
   const [queues, setQueues] = useState<QueueSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [queueFilter, setQueueFilter] = useState('');
+  const [queueSort, setQueueSort] = useState<'group' | 'name' | 'active'>('group');
   const [status, setStatus] = useState('active');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
@@ -59,15 +61,25 @@ export function App() {
   const totalPages = Math.max(1, Math.ceil(statusCount / pageSize));
 
   const groups = useMemo(() => {
+    const term = queueFilter.trim().toLowerCase();
+    const matched = term ? queues.filter((q) => q.name.toLowerCase().includes(term)) : queues;
+    if (term || queueSort !== 'group') {
+      const sorted = [...matched].sort((a, b) =>
+        queueSort === 'active'
+          ? b.total - a.total || a.name.localeCompare(b.name)
+          : a.name.localeCompare(b.name),
+      );
+      return [{ group: '', items: sorted }];
+    }
     const map = new Map<string, QueueSummary[]>();
-    for (const queue of queues) {
+    for (const queue of matched) {
       const key = queue.group || 'Queues';
       const bucket = map.get(key);
       if (bucket) bucket.push(queue);
       else map.set(key, [queue]);
     }
     return [...map.entries()].map(([group, items]) => ({ group, items }));
-  }, [queues]);
+  }, [queues, queueFilter, queueSort]);
 
   const refreshQueues = useCallback(async (silent = false) => {
     try {
@@ -289,6 +301,10 @@ export function App() {
           queueCount={queues.length}
           selected={selected}
           onSelect={(n) => (setSelected(n), setPage(0))}
+          filter={queueFilter}
+          onFilter={setQueueFilter}
+          sort={queueSort}
+          onSort={setQueueSort}
         />
 
         <main class="bp-main">

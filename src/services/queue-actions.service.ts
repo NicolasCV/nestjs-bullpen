@@ -153,6 +153,7 @@ export class QueueActionsService {
       finishedOn: job.finishedOn ?? null,
       delay: job.delay ?? null,
       failedReason: job.failedReason ?? null,
+      dataPreview: previewData(job.data),
     };
   }
 
@@ -171,4 +172,20 @@ export class QueueActionsService {
     }
     return job;
   }
+}
+
+const DATA_PREVIEW_CAP = 140;
+
+function previewData(data: unknown): string | null {
+  if (data == null) return null;
+  let text: string | undefined;
+  try {
+    text = typeof data === 'string' ? data : JSON.stringify(data);
+  } catch {
+    return null;
+  }
+  if (!text) return null;
+  text = text.replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  return text.length > DATA_PREVIEW_CAP ? `${text.slice(0, DATA_PREVIEW_CAP - 1)}…` : text;
 }

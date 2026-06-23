@@ -35,6 +35,7 @@ export interface JobSummary {
   finishedOn: number | null;
   delay: number | null;
   failedReason: string | null;
+  dataPreview: string | null;
 }
 
 export interface JobDetail extends JobSummary {

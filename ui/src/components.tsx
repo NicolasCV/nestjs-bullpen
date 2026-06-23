@@ -101,24 +101,62 @@ export function Sidebar({
   queueCount,
   selected,
   onSelect,
+  filter,
+  onFilter,
+  sort,
+  onSort,
 }: {
   groups: { group: string; items: QueueSummary[] }[];
   queueCount: number;
   selected: string | null;
   onSelect: (name: string) => void;
+  filter: string;
+  onFilter: (value: string) => void;
+  sort: 'group' | 'name' | 'active';
+  onSort: (value: 'group' | 'name' | 'active') => void;
 }): JSX.Element {
-  const showHeadings = groups.length > 1 || (groups[0] && groups[0].group !== 'Queues');
+  const matched = groups.reduce((n, g) => n + g.items.length, 0);
+  const showHeadings = groups.some((g) => g.group && g.group !== 'Queues');
   return (
     <aside class="bp-sidebar">
-      <div class="bp-sidebar-title">Queues · {queueCount}</div>
-      {groups.map(({ group, items }) => (
-        <div class="bp-group" key={group}>
-          {showHeadings ? <div class="bp-group-title">{group}</div> : null}
-          {items.map((queue) => (
-            <QueueCard key={queue.name} queue={queue} selected={selected} onSelect={onSelect} />
-          ))}
+      <div class="bp-sidebar-title">
+        Queues · {matched}
+        {matched < queueCount ? <span class="bp-dim"> of {queueCount}</span> : null}
+      </div>
+      <div class="bp-queue-controls">
+        <div class="bp-find">
+          <IconSearch size={14} class="bp-find-icon" />
+          <input
+            class="bp-input"
+            placeholder="Search queues…"
+            value={filter}
+            onInput={(e) => onFilter((e.target as HTMLInputElement).value)}
+            autocomplete="off"
+          />
         </div>
-      ))}
+        <select
+          class="bp-input bp-queue-sort"
+          value={sort}
+          onChange={(e) => onSort((e.target as HTMLSelectElement).value as 'group' | 'name' | 'active')}
+          aria-label="Sort queues"
+        >
+          <option value="group">Group</option>
+          <option value="name">A→Z</option>
+          <option value="active">Most active</option>
+        </select>
+      </div>
+      {matched === 0 ? (
+        <div class="bp-queue-empty">No queues match.</div>
+      ) : (
+        groups.map(({ group, items }) => (
+          <div class="bp-group" key={group}>
+            {showHeadings && group ? <div class="bp-group-title">{group}</div> : null}
+            {items.map((queue) => (
+              <QueueCard key={queue.name} queue={queue} selected={selected} onSelect={onSelect} />
+            ))}
+          </div>
+        ))
+      )}
     </aside>
   );
 }
@@ -156,19 +194,23 @@ function fmtKeep(v: unknown): string | null {
   return null;
 }
 
-function fmtRetention(d: Record<string, unknown>): string {
-  const parts: string[] = [];
+function retentionChips(d: Record<string, unknown>): { label: string; value: string }[] {
+  const chips: { label: string; value: string }[] = [];
   const complete = fmtKeep(d.removeOnComplete);
-  if (complete) parts.push(`complete ${complete}`);
+  if (complete) chips.push({ label: 'complete', value: complete });
   const fail = fmtKeep(d.removeOnFail);
-  if (fail) parts.push(`fail ${fail}`);
-  if (d.attempts != null) parts.push(`attempts ${d.attempts}`);
-  return parts.join(' · ');
+  if (fail) chips.push({ label: 'fail', value: fail });
+  if (d.attempts != null) chips.push({ label: 'attempts', value: String(d.attempts) });
+  return chips;
 }
 
 export function WorkerPanel({ topology }: { topology: QueueTopology | null }): JSX.Element | null {
   if (!topology || (!topology.processor && !topology.defaultJobOptions)) return null;
-  const retention = topology.defaultJobOptions ? fmtRetention(topology.defaultJobOptions) : '';
+  const stats: { label: string; value: string }[] = [];
+  if (topology.concurrency != null) {
+    stats.push({ label: 'concurrency', value: String(topology.concurrency) });
+  }
+  if (topology.defaultJobOptions) stats.push(...retentionChips(topology.defaultJobOptions));
   return (
     <div class="bp-worker">
       {topology.processor ? (
@@ -177,10 +219,12 @@ export function WorkerPanel({ topology }: { topology: QueueTopology | null }): J
           <b>{topology.processor}</b>
         </span>
       ) : null}
-      {topology.concurrency != null ? (
-        <span class="bp-worker-item bp-dim">concurrency {topology.concurrency}</span>
-      ) : null}
-      {retention ? <span class="bp-worker-item bp-dim">retention: {retention}</span> : null}
+      {stats.map((s) => (
+        <span class="bp-stat" key={s.label}>
+          <span class="bp-stat-k">{s.label}</span>
+          {s.value}
+        </span>
+      ))}
       {topology.events.length ? (
         <span class="bp-worker-events">
           {topology.events.map((e) => (
@@ -328,6 +372,7 @@ export function JobsTable({
           <th>Name</th>
           <th style={{ width: '120px' }}>State</th>
           <th style={{ width: '110px' }}>Created</th>
+          <th style={{ width: '90px' }}>Duration</th>
           <th style={{ width: '80px' }}>Attempts</th>
           <th style={{ width: readOnly ? '0' : '120px' }} />
         </tr>
@@ -338,12 +383,19 @@ export function JobsTable({
             <td class="bp-jobid">#{job.id}</td>
             <td>
               <div class="bp-jobname">{job.name || '(unnamed)'}</div>
-              {job.failedReason ? <div class="bp-reason">{job.failedReason}</div> : null}
+              {job.failedReason ? (
+                <div class="bp-reason">{job.failedReason}</div>
+              ) : job.dataPreview ? (
+                <div class="bp-jobdata">{job.dataPreview}</div>
+              ) : null}
             </td>
             <td>
               <Badge state={job.state} />
             </td>
             <td class="bp-dim">{relTime(job.timestamp)}</td>
+            <td class="bp-dim" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {duration(job.processedOn, job.finishedOn)}
+            </td>
             <td class="bp-dim" style={{ fontVariantNumeric: 'tabular-nums' }}>
               {job.attemptsMade}
             </td>

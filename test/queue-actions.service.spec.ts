@@ -63,6 +63,23 @@ describe('QueueActionsService', () => {
     expect(job.id).toBe('1');
     expect(job.state).toBe('failed');
     expect(job.failedReason).toBe('boom');
+    expect(job.dataPreview).toBe('{"to":"a@b.c"}');
+  });
+
+  it('caps long job data previews and returns null for empty data', async () => {
+    const queue = fakeQueue();
+    queue.getJobs = jest
+      .fn()
+      .mockResolvedValueOnce([fakeJob({ data: { blob: 'x'.repeat(500) } })])
+      .mockResolvedValueOnce([fakeJob({ data: null })]);
+    const { service } = makeService(queue);
+
+    const [capped] = await service.listJobs('emails', 'completed', 0, 10);
+    expect(capped.dataPreview!.length).toBeLessThanOrEqual(140);
+    expect(capped.dataPreview!.endsWith('…')).toBe(true);
+
+    const [empty] = await service.listJobs('emails', 'completed', 0, 10);
+    expect(empty.dataPreview).toBeNull();
   });
 
   it('returns full detail including logs and stacktrace', async () => {
