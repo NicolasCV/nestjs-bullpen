@@ -35,3 +35,7 @@ Beyond those: the library is platform-agnostic (no Express- or Fastify-specific 
 ## Reporting bugs
 
 Open an issue with the package version, NestJS version, and a minimal reproduction. The smaller the repro, the faster it gets fixed.
+
+## Releases
+
+Releases are automated. Every push to `main` runs CI and publishes to npm, with the version bumped from the commit message: include `[major]` or `[minor]` to pick the level, otherwise it's a patch. The pipeline tags the release and pushes the version bump back, so there's nothing to publish by hand.
