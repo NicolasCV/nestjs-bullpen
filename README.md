@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasCV/nestjs-bullpen/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/nestjs-bullpen.svg)](https://www.npmjs.com/package/nestjs-bullpen)
-[![install size](https://packagephobia.com/badge?p=nestjs-bullpen)](https://packagephobia.com/result?p=nestjs-bullpen)
+[![install size](https://badgen.net/packagephobia/install/nestjs-bullpen)](https://packagephobia.com/result?p=nestjs-bullpen)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](#small-and-staying-that-way)
 [![UI bundle](https://img.shields.io/badge/UI-~20%20kB%20gzip-brightgreen.svg)](#small-and-staying-that-way)
 [![license](https://img.shields.io/github/license/NicolasCV/nestjs-bullpen.svg)](./LICENSE)
