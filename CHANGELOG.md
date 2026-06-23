@@ -2,8 +2,10 @@
 
 ## 0.3.0
 
+- **Served as middleware, not a controller (isolation).** Bullpen now runs before the host app's global interceptors and guards. Responses are always raw HTML/JSON (never wrapped by a response interceptor), and the dashboard is protected only by its own configured guard, never your app-wide guards. Still platform-agnostic (Express and Fastify).
 - **Writes are now opt-in (breaking).** The dashboard is read-only by default; set `writable: true` in `forRoot` to enable mutations (retry/remove/promote/pause/resume/clean/add). When off, the write controls are hidden and the API returns 403. This replaces the old `readOnly` option. Per-queue `@BullpenQueue({ readOnly: true })` still locks individual queues.
-- Logo added; README size/install badges; license badge reads from GitHub. Removed the bull-board comparison from the README.
+- Bull logo in the dashboard topbar + favicon (inlined, ~4 KB). Retention durations shown human-readable (`age 1h`, `age 1d`) instead of raw seconds. Background refresh failures no longer surface as error banners.
+- Logo in the README; size/install badges; license badge reads from GitHub. Removed the bull-board comparison.
 
 ## 0.2.0
 

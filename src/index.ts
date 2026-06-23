@@ -1,5 +1,5 @@
 export { BullpenModule } from './bullpen.module';
-export { BullpenController } from './bullpen.controller';
+export { BullpenMiddleware } from './bullpen.middleware';
 export { BullpenAuthGuard } from './auth/bullpen-auth.guard';
 export { QueueDiscoveryService } from './services/queue-discovery.service';
 export { QueueActionsService } from './services/queue-actions.service';

@@ -12,7 +12,8 @@ import {
   WorkerPanel,
 } from './components';
 import { config } from './config';
-import { BullLogo, IconBolt, IconMoon, IconSun } from './icons';
+import { IconBolt, IconMoon, IconSun } from './icons';
+import { LOGO } from './logo';
 
 const PAGE_SIZE = 25;
 type MutationAction = 'retry' | 'promote' | 'remove';
@@ -63,26 +64,29 @@ export function App() {
     return [...map.entries()].map(([group, items]) => ({ group, items }));
   }, [queues]);
 
-  const refreshQueues = useCallback(async () => {
+  const refreshQueues = useCallback(async (silent = false) => {
     try {
       const next = await api.listQueues();
       setQueues(next);
       setSelected((prev) => prev ?? next[0]?.name ?? null);
     } catch (e) {
-      setError((e as Error).message);
+      if (!silent) setError((e as Error).message);
     }
   }, []);
 
-  const refreshJobs = useCallback(async (name: string, st: string, pg: number) => {
-    setLoadingJobs(true);
-    try {
-      setJobs(await api.listJobs(name, st, pg, PAGE_SIZE));
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoadingJobs(false);
-    }
-  }, []);
+  const refreshJobs = useCallback(
+    async (name: string, st: string, pg: number, silent = false) => {
+      setLoadingJobs(true);
+      try {
+        setJobs(await api.listJobs(name, st, pg, PAGE_SIZE));
+      } catch (e) {
+        if (!silent) setError((e as Error).message);
+      } finally {
+        setLoadingJobs(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void refreshQueues();
@@ -113,8 +117,8 @@ export function App() {
     const fallbackToPolling = () => {
       if (queuePoll != null) return;
       setLiveMode('poll');
-      void refreshQueues();
-      queuePoll = window.setInterval(() => void refreshQueues(), 4000);
+      void refreshQueues(true);
+      queuePoll = window.setInterval(() => void refreshQueues(true), 4000);
     };
 
     source = openQueueStream(
@@ -135,7 +139,7 @@ export function App() {
     if (!source) fallbackToPolling();
 
     const jobsTimer = window.setInterval(() => {
-      if (selected) void refreshJobs(selected, status, page);
+      if (selected) void refreshJobs(selected, status, page, true);
     }, 5000);
 
     return () => {
@@ -248,7 +252,7 @@ export function App() {
     <div class="bp-app">
       <header class="bp-topbar">
         <div class="bp-brand">
-          <BullLogo class="bp-logo" size={26} />
+          <img class="bp-logo-img" src={LOGO} alt="" width={26} height={26} />
           {config.title}
           <small>BullMQ</small>
         </div>
@@ -354,7 +358,7 @@ export function App() {
             </>
           ) : (
             <div class="bp-empty">
-              <BullLogo size={42} />
+              <img class="bp-logo-img" src={LOGO} alt="" width={42} height={42} />
               <div>No queues discovered</div>
               <div class="bp-dim">Register a queue with @nestjs/bullmq and refresh.</div>
             </div>

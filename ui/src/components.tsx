@@ -123,6 +123,23 @@ export function Sidebar({
   );
 }
 
+function fmtDuration(seconds: number): string {
+  const units: Array<[number, string]> = [
+    [2592000, 'mo'],
+    [86400, 'd'],
+    [3600, 'h'],
+    [60, 'm'],
+    [1, 's'],
+  ];
+  for (const [size, label] of units) {
+    if (seconds >= size) {
+      const value = seconds / size;
+      return `${Number.isInteger(value) ? value : value.toFixed(1)}${label}`;
+    }
+  }
+  return `${seconds}s`;
+}
+
 function fmtKeep(v: unknown): string | null {
   if (v == null) return null;
   if (v === true) return 'remove';
@@ -132,7 +149,7 @@ function fmtKeep(v: unknown): string | null {
     const o = v as { age?: number; count?: number };
     const parts = [
       o.count != null ? `last ${o.count}` : null,
-      o.age != null ? `age ${o.age}s` : null,
+      o.age != null ? `age ${fmtDuration(o.age)}` : null,
     ].filter(Boolean);
     return parts.length ? parts.join(' / ') : 'keep';
   }

@@ -92,6 +92,10 @@ body {
 .bp-brand .bp-logo {
   color: var(--accent);
 }
+.bp-logo-img {
+  display: block;
+  object-fit: contain;
+}
 .bp-brand small {
   color: var(--text-faint);
   font-weight: 500;

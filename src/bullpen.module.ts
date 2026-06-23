@@ -1,8 +1,13 @@
-import { DynamicModule, Module } from '@nestjs/common';
-import { PATH_METADATA } from '@nestjs/common/constants';
+import {
+  DynamicModule,
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 import { BullpenAuthGuard } from './auth/bullpen-auth.guard';
-import { BullpenController } from './bullpen.controller';
+import { BullpenMiddleware } from './bullpen.middleware';
 import { BULLPEN_OPTIONS, DEFAULT_ROUTE } from './constants';
 import type {
   BullpenModuleAsyncOptions,
@@ -19,31 +24,32 @@ const PROVIDERS = [
   QueueActionsService,
   QueueTopologyService,
   BullpenAuthGuard,
+  BullpenMiddleware,
 ];
 
 @Module({})
-export class BullpenModule {
+export class BullpenModule implements NestModule {
+  private static route: string = DEFAULT_ROUTE;
+
   static forRoot(options: BullpenModuleOptions = {}): DynamicModule {
     const route = normalizeRoute(options.route ?? DEFAULT_ROUTE);
+    BullpenModule.route = route;
     const auth = normalizeAuth(options.auth);
-    Reflect.defineMetadata(PATH_METADATA, route, BullpenController);
     attachGuardMetadata(auth);
     const resolved: ResolvedBullpenOptions = { ...options, route, auth };
     return {
       module: BullpenModule,
       imports: [DiscoveryModule],
-      controllers: [BullpenController],
       providers: [{ provide: BULLPEN_OPTIONS, useValue: resolved }, ...PROVIDERS],
     };
   }
 
   static forRootAsync(options: BullpenModuleAsyncOptions): DynamicModule {
     const route = normalizeRoute(options.route ?? DEFAULT_ROUTE);
-    Reflect.defineMetadata(PATH_METADATA, route, BullpenController);
+    BullpenModule.route = route;
     return {
       module: BullpenModule,
       imports: [DiscoveryModule, ...(options.imports ?? [])],
-      controllers: [BullpenController],
       providers: [
         {
           provide: BULLPEN_OPTIONS,
@@ -59,6 +65,16 @@ export class BullpenModule {
       ],
     };
   }
+
+  configure(consumer: MiddlewareConsumer): void {
+    const route = BullpenModule.route;
+    // Two entries: the exact mount (the UI shell) and a named wildcard for every sub-path
+    // (the API). Express 5 / Fastify middie need the `{*path}` form for nested matches.
+    consumer.apply(BullpenMiddleware).forRoutes(
+      { path: route, method: RequestMethod.ALL },
+      { path: `${route}/{*path}`, method: RequestMethod.ALL },
+    );
+  }
 }
 
 function normalizeAuth(auth: BullpenModuleOptions['auth']): ResolvedAuth {
@@ -68,7 +84,7 @@ function normalizeAuth(auth: BullpenModuleOptions['auth']): ResolvedAuth {
 
   const type = String(auth.type);
   if (type === 'basic') {
-    const a = auth as Extract<typeof auth, { type: 'basic' | any }> & Record<string, any>;
+    const a = auth as Record<string, any>;
     return { type: 'basic', credentials: a.credentials, validate: a.validate, realm: a.realm };
   }
   if (type === 'guard') {
@@ -88,7 +104,7 @@ function normalizeAuth(auth: BullpenModuleOptions['auth']): ResolvedAuth {
 function attachGuardMetadata(auth: ResolvedAuth): void {
   if (auth.type === 'guard' && auth.metadata) {
     for (const [key, value] of Object.entries(auth.metadata)) {
-      Reflect.defineMetadata(key, value, BullpenController);
+      Reflect.defineMetadata(key, value, BullpenMiddleware);
     }
   }
 }

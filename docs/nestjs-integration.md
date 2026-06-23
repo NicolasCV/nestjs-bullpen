@@ -34,6 +34,11 @@ The UI shows this as a worker strip above the job table. A plain Redis-backed da
 
 The topology reader matches `@nestjs/bullmq`'s metadata keys, mirrored in `src/constants.ts` (`BULLMQ_PROCESSOR_METADATA`, `BULLMQ_WORKER_METADATA`, `BULLMQ_ON_WORKER_EVENT_METADATA`, `BULLMQ_ON_QUEUE_EVENT_METADATA`). They've been stable across `@nestjs/bullmq` 10 and 11. If a future version renames them, update that file.
 
-## Platform-agnostic
+## Isolated from your app's pipeline
 
-Everything is a controller plus a guard, so the same build runs on `@nestjs/platform-express` and `@nestjs/platform-fastify` with no adapter packages.
+Bullpen mounts as NestJS middleware (via the module's `configure()`), which runs before the host app's global guards and interceptors. That has two consequences that matter in real apps:
+
+- A global response interceptor (one that wraps everything in `{ data }`, serializes, etc.) never touches Bullpen. The dashboard always gets raw HTML and raw JSON.
+- Global guards (an app-wide `APP_GUARD`) do not run on the dashboard. It is protected only by the guard you pass to `auth`. So the dashboard's access is fully under your control and independent of the rest of the app.
+
+It's still platform-agnostic: the middleware uses the raw Node request/response, so the same build runs on `@nestjs/platform-express` and `@nestjs/platform-fastify` with no adapter packages.

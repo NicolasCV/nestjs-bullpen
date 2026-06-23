@@ -1,8 +1,14 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { BullpenModule } from 'nestjs-bullpen';
+import { HeaderGuard, PingController, WrapInterceptor } from './global';
 import { EmailsProcessor, MediaProcessor } from './processors';
 import { connection } from './redis';
+
+// Opt-in: a global response-wrapping interceptor + a deny-by-default guard, to demonstrate that
+// Bullpen (middleware) ignores both. `/ping` is subject to them; the dashboard is not.
+const demoGlobals = process.env.BULLPEN_DEMO_GLOBALS === '1';
 
 @Module({
   imports: [
@@ -39,6 +45,16 @@ import { connection } from './redis';
       },
     }),
   ],
-  providers: [EmailsProcessor, MediaProcessor],
+  controllers: demoGlobals ? [PingController] : [],
+  providers: [
+    EmailsProcessor,
+    MediaProcessor,
+    ...(demoGlobals
+      ? [
+          { provide: APP_INTERCEPTOR, useClass: WrapInterceptor },
+          { provide: APP_GUARD, useClass: HeaderGuard },
+        ]
+      : []),
+  ],
 })
 export class AppModule {}

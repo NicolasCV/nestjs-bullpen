@@ -1,4 +1,4 @@
-import { BullpenController } from '../src/bullpen.controller';
+import { BullpenMiddleware } from '../src/bullpen.middleware';
 import { BullpenModule } from '../src/bullpen.module';
 import { BULLPEN_QUEUE_METADATA, BULLPEN_OPTIONS } from '../src/constants';
 import { BullpenQueue } from '../src/decorators/bullpen-queue.decorator';
@@ -41,11 +41,11 @@ describe('v0.2 ergonomics', () => {
     expect(auth.useGuard).toEqual([JwtGuard]);
   });
 
-  it('attaches guard metadata (roles) to the dashboard controller', () => {
+  it('attaches guard metadata (roles) to the dashboard middleware', () => {
     BullpenModule.forRoot({
       auth: { type: 'guard', useGuard: RolesGuard, metadata: { roles: ['admin'] } },
     });
-    expect(Reflect.getMetadata('roles', BullpenController)).toEqual(['admin']);
+    expect(Reflect.getMetadata('roles', BullpenMiddleware)).toEqual(['admin']);
   });
 
   it('@BullpenQueue stores presentation metadata', () => {

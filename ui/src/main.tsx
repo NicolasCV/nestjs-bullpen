@@ -1,11 +1,17 @@
 import { render } from 'preact';
 import { App } from './app';
 import { config } from './config';
+import { LOGO } from './logo';
 import './styles.css';
 
 const initialTheme = localStorage.getItem('bullpen-theme') ?? config.theme;
 document.documentElement.setAttribute('data-theme', initialTheme);
 document.title = config.title;
+
+const favicon = document.createElement('link');
+favicon.rel = 'icon';
+favicon.href = LOGO;
+document.head.appendChild(favicon);
 
 const root = document.getElementById('app');
 if (root) {

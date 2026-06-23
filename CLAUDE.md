@@ -22,8 +22,8 @@ A NestJS-native dashboard for BullMQ. One line to mount, auto-discovers queues, 
 ## Architecture
 
 - `src/` — the library (compiled to `dist/` by `tsc`).
-  - `bullpen.module.ts` — `forRoot`/`forRootAsync`. Normalizes `auth` (guard class/array → canonical shape), attaches guard metadata (roles) to the controller, rewrites the controller `PATH_METADATA` to the configured `route`.
-  - `bullpen.controller.ts` — platform-agnostic controller: serves the single-file UI, the JSON API, and the SSE stream. Guarded by `BullpenAuthGuard`.
+  - `bullpen.module.ts` — `forRoot`/`forRootAsync` + `NestModule.configure()`. Normalizes `auth` (guard class/array → canonical shape), attaches guard metadata (roles) to the middleware, and mounts the middleware on the configured `route` (exact + `{*path}` wildcard).
+  - `bullpen.middleware.ts` — the core. Runs as NestJS middleware (BEFORE global guards/interceptors) on the raw Node req/res, so responses are always raw and only the configured guard applies. Does manual routing, runs `BullpenAuthGuard` via a synthetic `ExecutionContext`, serves the single-file UI, the JSON API, and the SSE stream.
   - `services/queue-discovery.service.ts` — finds `Queue` instances via `DiscoveryService` (`instanceof Queue` + duck-type fallback).
   - `services/queue-actions.service.ts` — wraps BullMQ reads/mutations.
   - `services/queue-topology.service.ts` — maps each queue to its `@Processor` class, concurrency, and `@OnWorkerEvent` handlers (the headline differentiator).
