@@ -59,7 +59,8 @@ jobs:
 
       # The [skip ci] in the release commit stops this push from re-triggering the workflow.
       - name: Bump version
-        run: npm version ${{ steps.bump.outputs.level }} -m "release: v%s [skip ci]"
+        run: |
+          npm version ${{ steps.bump.outputs.level }} -m "release: v%s [skip ci]"
 
       - name: Publish to npm
         run: npm publish
