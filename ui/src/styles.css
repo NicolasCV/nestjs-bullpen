@@ -135,6 +135,7 @@ body {
 }
 .bp-queue-controls {
   display: flex;
+  flex-direction: column;
   gap: 6px;
   padding: 0 8px 10px;
 }
@@ -142,9 +143,7 @@ body {
   max-width: none;
 }
 .bp-queue-sort {
-  flex: 0 0 auto;
-  width: auto;
-  padding: 8px 8px;
+  width: 100%;
   cursor: pointer;
 }
 .bp-queue-empty {

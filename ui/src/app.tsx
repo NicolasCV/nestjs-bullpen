@@ -34,7 +34,7 @@ export function App() {
   const [queues, setQueues] = useState<QueueSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [queueFilter, setQueueFilter] = useState('');
-  const [queueSort, setQueueSort] = useState<'group' | 'name' | 'active'>('group');
+  const [queueSort, setQueueSort] = useState<'group' | 'name' | 'active'>('active');
   const [status, setStatus] = useState('active');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
