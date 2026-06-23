@@ -51,10 +51,22 @@ describe('QueueTopologyService', () => {
   });
 
   it('returns empty topology for an unknown queue, falling back to the queues option', () => {
-    const service = makeService({ queues: { reports: { group: 'Analytics', readOnly: true } } });
+    const service = makeService({
+      queues: {
+        reports: {
+          group: 'Analytics',
+          readOnly: true,
+          defaultJobOptions: { removeOnComplete: { count: 10 } },
+        },
+      },
+    });
     const topology = service.getTopology('reports');
     expect(topology.processor).toBeNull();
     expect(topology.events).toEqual([]);
-    expect(service.getMeta('reports')).toEqual({ group: 'Analytics', readOnly: true });
+    expect(service.getMeta('reports')).toEqual({
+      group: 'Analytics',
+      readOnly: true,
+      defaultJobOptions: { removeOnComplete: { count: 10 } },
+    });
   });
 });

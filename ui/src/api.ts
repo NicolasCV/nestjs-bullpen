@@ -18,6 +18,7 @@ export interface QueueTopology {
   concurrency: number | null;
   events: { scope: 'worker' | 'queue'; event: string; handler: string }[];
   meta: { description?: string; group?: string; readOnly?: boolean; danger?: boolean };
+  defaultJobOptions?: Record<string, unknown> | null;
 }
 
 export interface JobSummary {

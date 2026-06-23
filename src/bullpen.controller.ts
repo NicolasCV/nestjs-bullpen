@@ -67,10 +67,13 @@ export class BullpenController {
 
   @Get('api/queues/:name/topology')
   topologyFor(@Param('name') name: string) {
-    if (!this.discovery.getQueue(name)) {
+    const queue = this.discovery.getQueue(name);
+    if (!queue) {
       throw new NotFoundException(`Queue "${name}" not found`);
     }
-    return this.topology.getTopology(name);
+    const defaults = (queue as { opts?: { defaultJobOptions?: Record<string, unknown> } }).opts
+      ?.defaultJobOptions;
+    return { ...this.topology.getTopology(name), defaultJobOptions: defaults ?? null };
   }
 
   @Get('api/queues/:name/jobs')
@@ -147,7 +150,12 @@ export class BullpenController {
     @Body() body: { name?: string; data?: unknown; opts?: Record<string, unknown> } = {},
   ) {
     this.assertWritable(name);
-    return { ok: true, ...(await this.actions.addJob(name, body.name ?? 'job', body.data, body.opts)) };
+    const opts = {
+      ...this.options.defaultJobOptions,
+      ...this.topology.getMeta(name).defaultJobOptions,
+      ...body.opts,
+    };
+    return { ok: true, ...(await this.actions.addJob(name, body.name ?? 'job', body.data, opts)) };
   }
 
   @Get('api/queues/:name/export')

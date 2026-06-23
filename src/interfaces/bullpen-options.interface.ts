@@ -1,4 +1,5 @@
 import type { CanActivate, Type } from '@nestjs/common';
+import type { JobsOptions } from 'bullmq';
 import type { BullpenAuthType } from '../constants';
 
 export interface BasicAuthCredentials {
@@ -39,6 +40,8 @@ export interface BullpenQueueOptions {
   group?: string;
   readOnly?: boolean;
   danger?: boolean;
+  /** Default BullMQ job options (retention/retry) applied to jobs added from the dashboard. */
+  defaultJobOptions?: JobsOptions;
 }
 
 export interface BullpenModuleOptions {
@@ -57,6 +60,8 @@ export interface BullpenModuleOptions {
   exclude?: string[];
   /** Per-queue presentation for queues without a `@BullpenQueue()`-decorated processor. */
   queues?: Record<string, BullpenQueueOptions>;
+  /** Default BullMQ job options (retention/retry) for jobs added from the dashboard. Per-queue overrides this. */
+  defaultJobOptions?: JobsOptions;
   /** Dashboard title. Default: `Bullpen`. */
   title?: string;
   /** Default UI theme. Default: `dark`. */

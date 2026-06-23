@@ -67,7 +67,7 @@ Lightweight isn't a tagline here. It's a project rule, checked on every build. C
 | | Bullpen |
 | --- | --- |
 | Runtime dependencies | **0** (everything is a peer dep) |
-| UI bundle | one self-contained file, **~15 KB gzipped** |
+| UI bundle | one self-contained file, **~16 KB gzipped** |
 | Published package | **~32 KB** |
 
 ## Bullpen vs bull-board

@@ -20,6 +20,8 @@ export interface QueueTopology {
   concurrency: number | null;
   events: { scope: 'worker' | 'queue'; event: string; handler: string }[];
   meta: BullpenQueueOptions;
+  /** The queue's configured BullMQ default job options (from registerQueue), shown read-only. */
+  defaultJobOptions?: Record<string, unknown> | null;
 }
 
 export interface JobSummary {

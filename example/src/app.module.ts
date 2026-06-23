@@ -7,7 +7,19 @@ import { connection } from './redis';
 @Module({
   imports: [
     BullModule.forRoot({ connection }),
-    BullModule.registerQueue({ name: 'emails' }, { name: 'media' }, { name: 'reports' }),
+    BullModule.registerQueue(
+      {
+        name: 'emails',
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: { age: 3600, count: 1000 },
+          removeOnFail: { age: 86_400 },
+        },
+      },
+      { name: 'media' },
+      { name: 'reports' },
+    ),
 
     // The whole dashboard — one line. Auto-discovers every queue, reads @BullpenQueue metadata,
     // and maps each queue to its NestJS processor + worker events.
@@ -16,6 +28,8 @@ import { connection } from './redis';
       title: 'Bullpen Demo',
       theme: 'dark',
       auth: { type: 'basic', credentials: { username: 'admin', password: 'admin' } },
+      // Default options Bullpen applies to jobs added from the dashboard (per-queue can override).
+      defaultJobOptions: { removeOnComplete: { count: 500 } },
       // 'reports' has no processor class, so enrich it here instead of with @BullpenQueue.
       queues: {
         reports: { description: 'Scheduled analytics reports', group: 'Analytics', readOnly: true },

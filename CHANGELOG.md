@@ -25,11 +25,12 @@ First public release.
 
 - Range-based job pagination and count-only summaries.
 - Find a job by id, add jobs, export a state to JSON, and bulk retry/promote. Exports and bulk actions are capped and report when they hit the cap.
+- Default job options (retention/retry) at the module and per-queue level, first-class fields in the Add Job form, and each queue's retention policy shown in the worker panel.
 - Real-time queue counts over SSE, with automatic polling fallback.
 
 ### UI
 
-- Dark-first, single self-contained file (~15 KB gzipped), light theme, sidebar grouping, and live indicator.
+- Dark-first, single self-contained file (~16 KB gzipped), light theme, sidebar grouping, and live indicator.
 
 ### Typing
 

@@ -123,17 +123,47 @@ export function Sidebar({
   );
 }
 
+function fmtKeep(v: unknown): string | null {
+  if (v == null) return null;
+  if (v === true) return 'remove';
+  if (v === false) return 'keep all';
+  if (typeof v === 'number') return `last ${v}`;
+  if (typeof v === 'object') {
+    const o = v as { age?: number; count?: number };
+    const parts = [
+      o.count != null ? `last ${o.count}` : null,
+      o.age != null ? `age ${o.age}s` : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(' / ') : 'keep';
+  }
+  return null;
+}
+
+function fmtRetention(d: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const complete = fmtKeep(d.removeOnComplete);
+  if (complete) parts.push(`complete ${complete}`);
+  const fail = fmtKeep(d.removeOnFail);
+  if (fail) parts.push(`fail ${fail}`);
+  if (d.attempts != null) parts.push(`attempts ${d.attempts}`);
+  return parts.join(' · ');
+}
+
 export function WorkerPanel({ topology }: { topology: QueueTopology | null }): JSX.Element | null {
-  if (!topology || !topology.processor) return null;
+  if (!topology || (!topology.processor && !topology.defaultJobOptions)) return null;
+  const retention = topology.defaultJobOptions ? fmtRetention(topology.defaultJobOptions) : '';
   return (
     <div class="bp-worker">
-      <span class="bp-worker-item">
-        <IconCpu size={14} />
-        <b>{topology.processor}</b>
-      </span>
+      {topology.processor ? (
+        <span class="bp-worker-item">
+          <IconCpu size={14} />
+          <b>{topology.processor}</b>
+        </span>
+      ) : null}
       {topology.concurrency != null ? (
         <span class="bp-worker-item bp-dim">concurrency {topology.concurrency}</span>
       ) : null}
+      {retention ? <span class="bp-worker-item bp-dim">retention: {retention}</span> : null}
       {topology.events.length ? (
         <span class="bp-worker-events">
           {topology.events.map((e) => (
@@ -310,6 +340,19 @@ export function Toolbar({
   );
 }
 
+type RemoveMode = 'default' | 'true' | 'false' | 'count' | 'age';
+
+function removeValue(
+  mode: RemoveMode,
+  value: string,
+): boolean | { count: number } | { age: number } | undefined {
+  if (mode === 'true') return true;
+  if (mode === 'false') return false;
+  if (mode === 'count') return { count: Number(value) || 0 };
+  if (mode === 'age') return { age: Number(value) || 0 };
+  return undefined;
+}
+
 export function AddJobModal({
   queue,
   busy,
@@ -323,26 +366,86 @@ export function AddJobModal({
 }): JSX.Element {
   const [name, setName] = useState('job');
   const [data, setData] = useState('{\n  "example": true\n}');
-  const [opts, setOpts] = useState('');
+  const [attempts, setAttempts] = useState('');
+  const [priority, setPriority] = useState('');
+  const [delay, setDelay] = useState('');
+  const [backoffType, setBackoffType] = useState<'none' | 'fixed' | 'exponential'>('none');
+  const [backoffDelay, setBackoffDelay] = useState('1000');
+  const [rocMode, setRocMode] = useState<RemoveMode>('default');
+  const [rocValue, setRocValue] = useState('100');
+  const [rofMode, setRofMode] = useState<RemoveMode>('default');
+  const [rofValue, setRofValue] = useState('1000');
+  const [extra, setExtra] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
   const submit = () => {
     let parsedData: unknown;
-    let parsedOpts: Record<string, unknown> | undefined;
     try {
       parsedData = data.trim() ? JSON.parse(data) : {};
     } catch {
       setErr('Data is not valid JSON');
       return;
     }
-    try {
-      parsedOpts = opts.trim() ? JSON.parse(opts) : undefined;
-    } catch {
-      setErr('Options are not valid JSON');
-      return;
+    const opts: Record<string, unknown> = {};
+    const int = (v: string) => (v.trim() === '' ? undefined : Number.parseInt(v, 10));
+    const a = int(attempts);
+    if (a != null && !Number.isNaN(a)) opts.attempts = a;
+    const p = int(priority);
+    if (p != null && !Number.isNaN(p)) opts.priority = p;
+    const d = int(delay);
+    if (d != null && !Number.isNaN(d)) opts.delay = d;
+    if (backoffType !== 'none') opts.backoff = { type: backoffType, delay: int(backoffDelay) ?? 1000 };
+    const roc = removeValue(rocMode, rocValue);
+    if (roc !== undefined) opts.removeOnComplete = roc;
+    const rof = removeValue(rofMode, rofValue);
+    if (rof !== undefined) opts.removeOnFail = rof;
+    if (extra.trim()) {
+      try {
+        Object.assign(opts, JSON.parse(extra));
+      } catch {
+        setErr('Extra options is not valid JSON');
+        return;
+      }
     }
-    onSubmit({ name: name || 'job', data: parsedData, opts: parsedOpts });
+    onSubmit({
+      name: name || 'job',
+      data: parsedData,
+      opts: Object.keys(opts).length ? opts : undefined,
+    });
   };
+
+  const removeRow = (
+    label: string,
+    mode: RemoveMode,
+    setMode: (m: RemoveMode) => void,
+    value: string,
+    setValue: (v: string) => void,
+  ) => (
+    <div class="bp-field">
+      <label>{label}</label>
+      <div class="bp-opt-inline">
+        <select
+          class="bp-input"
+          value={mode}
+          onChange={(e) => setMode((e.target as HTMLSelectElement).value as RemoveMode)}
+        >
+          <option value="default">queue default</option>
+          <option value="true">remove immediately</option>
+          <option value="false">keep all</option>
+          <option value="count">keep last N</option>
+          <option value="age">keep for age (s)</option>
+        </select>
+        {mode === 'count' || mode === 'age' ? (
+          <input
+            class="bp-input"
+            type="number"
+            value={value}
+            onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -372,13 +475,75 @@ export function AddJobModal({
               onInput={(e) => setData((e.target as HTMLTextAreaElement).value)}
             />
           </div>
+
+          <div class="bp-opt-grid">
+            <div class="bp-field">
+              <label>Attempts</label>
+              <input
+                class="bp-input"
+                type="number"
+                placeholder="1"
+                value={attempts}
+                onInput={(e) => setAttempts((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div class="bp-field">
+              <label>Priority</label>
+              <input
+                class="bp-input"
+                type="number"
+                placeholder="0"
+                value={priority}
+                onInput={(e) => setPriority((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div class="bp-field">
+              <label>Delay (ms)</label>
+              <input
+                class="bp-input"
+                type="number"
+                placeholder="0"
+                value={delay}
+                onInput={(e) => setDelay((e.target as HTMLInputElement).value)}
+              />
+            </div>
+          </div>
+
           <div class="bp-field">
-            <label>Options (JSON, optional)</label>
+            <label>Backoff on retry</label>
+            <div class="bp-opt-inline">
+              <select
+                class="bp-input"
+                value={backoffType}
+                onChange={(e) =>
+                  setBackoffType((e.target as HTMLSelectElement).value as typeof backoffType)
+                }
+              >
+                <option value="none">none</option>
+                <option value="fixed">fixed</option>
+                <option value="exponential">exponential</option>
+              </select>
+              {backoffType !== 'none' ? (
+                <input
+                  class="bp-input"
+                  type="number"
+                  value={backoffDelay}
+                  onInput={(e) => setBackoffDelay((e.target as HTMLInputElement).value)}
+                />
+              ) : null}
+            </div>
+          </div>
+
+          {removeRow('Remove on complete', rocMode, setRocMode, rocValue, setRocValue)}
+          {removeRow('Remove on fail', rofMode, setRofMode, rofValue, setRofValue)}
+
+          <div class="bp-field">
+            <label>Extra options (JSON, optional)</label>
             <textarea
-              class="bp-textarea"
-              value={opts}
-              placeholder={'{ "delay": 5000, "priority": 1 }'}
-              onInput={(e) => setOpts((e.target as HTMLTextAreaElement).value)}
+              class="bp-textarea short"
+              value={extra}
+              placeholder={'{ "jobId": "custom-id" }'}
+              onInput={(e) => setExtra((e.target as HTMLTextAreaElement).value)}
             />
           </div>
         </div>

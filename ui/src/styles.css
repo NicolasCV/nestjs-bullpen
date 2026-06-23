@@ -693,3 +693,33 @@ body {
 [data-theme='light'] .bp-modal {
   box-shadow: 0 24px 60px rgba(20, 25, 40, 0.18);
 }
+.bp-opt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.bp-opt-grid .bp-field {
+  margin-bottom: 0;
+}
+.bp-opt-inline {
+  display: flex;
+  gap: 8px;
+}
+.bp-opt-inline .bp-input {
+  flex: 1;
+}
+select.bp-input {
+  padding-left: 12px;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(1em + 1px),
+    calc(100% - 11px) calc(1em + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.bp-textarea.short {
+  min-height: 60px;
+}

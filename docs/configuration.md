@@ -49,3 +49,25 @@ export class EmailsProcessor extends WorkerHost {}
 | `danger`      | Marks the queue with a warning badge.                 |
 
 For queues that have no processor class, set the same fields through the `queues` option map instead.
+
+## Default job options (retention and retry)
+
+Set BullMQ job options that Bullpen applies to jobs **added from the dashboard**. Useful for retention (`removeOnComplete` / `removeOnFail`) and retry (`attempts` / `backoff`). They merge in this order, last wins: module `defaultJobOptions`, then the per-queue value, then whatever the Add Job form sends.
+
+```ts
+BullpenModule.forRoot({
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 1000 }, // keep 1h or last 1000
+    removeOnFail: { age: 86400 },
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+  },
+  queues: {
+    payments: { defaultJobOptions: { removeOnComplete: false } }, // keep everything for this queue
+  },
+});
+```
+
+`removeOnComplete` / `removeOnFail` accept `true` (remove right away), `false` (keep all), a number (keep the last N), or `{ age, count }`. This mirrors BullMQ exactly, since the value is passed straight through to `queue.add`.
+
+The dashboard also shows each queue's own retention policy (the `defaultJobOptions` you set on `registerQueue`) in the worker panel, and the Add Job form has fields for attempts, priority, delay, backoff, and both removal policies.
