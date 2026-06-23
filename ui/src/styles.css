@@ -497,6 +497,33 @@ body {
   font-size: 13px;
   border-top: 1px solid var(--border);
 }
+.bp-pager-count {
+  margin-right: auto;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.bp-pager-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bp-pager-size select.bp-input {
+  width: auto;
+  padding: 6px 30px 6px 10px;
+}
+.bp-pager-pos {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bp-pager .bp-pager-jump {
+  width: 72px;
+  padding: 6px 10px;
+  text-align: center;
+}
+.bp-pager-jump::-webkit-outer-spin-button,
+.bp-pager-jump::-webkit-inner-spin-button {
+  margin: 0;
+}
 .bp-banner {
   margin: 12px 20px 0;
   padding: 10px 14px;

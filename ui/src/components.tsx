@@ -222,6 +222,83 @@ export function Chips({
   );
 }
 
+export function Pager({
+  page,
+  pageSize,
+  pageSizes,
+  totalPages,
+  totalCount,
+  status,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pageSize: number;
+  pageSizes: number[];
+  totalPages: number;
+  totalCount: number;
+  status: string;
+  onPage: (page: number) => void;
+  onPageSize: (size: number) => void;
+}): JSX.Element {
+  const [draft, setDraft] = useState('');
+  const commitJump = (raw: string) => {
+    const parsed = Number.parseInt(raw, 10);
+    setDraft('');
+    if (Number.isNaN(parsed)) return;
+    onPage(Math.min(totalPages, Math.max(1, parsed)) - 1);
+  };
+  return (
+    <div class="bp-pager">
+      <span class="bp-pager-count">
+        {totalCount.toLocaleString()} {status}
+      </span>
+      <label class="bp-pager-size">
+        <span class="bp-dim">Per page</span>
+        <select
+          class="bp-input"
+          value={String(pageSize)}
+          onChange={(e) => onPageSize(Number((e.target as HTMLSelectElement).value))}
+        >
+          {pageSizes.map((size) => (
+            <option key={size} value={String(size)}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="bp-pager-pos">
+        Page {page + 1} of {totalPages}
+      </span>
+      <button class="bp-icon-btn" title="Previous page" disabled={page <= 0} onClick={() => onPage(page - 1)}>
+        ‹
+      </button>
+      <input
+        class="bp-input bp-pager-jump"
+        type="number"
+        min={1}
+        max={totalPages}
+        placeholder="Go to"
+        aria-label="Go to page"
+        value={draft}
+        onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commitJump((e.target as HTMLInputElement).value);
+        }}
+        onBlur={(e) => commitJump((e.target as HTMLInputElement).value)}
+      />
+      <button
+        class="bp-icon-btn"
+        title="Next page"
+        disabled={page >= totalPages - 1}
+        onClick={() => onPage(page + 1)}
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 type RowAction = (action: 'retry' | 'promote' | 'remove', job: JobSummary) => void;
 
 function rowActions(state: string): Array<'retry' | 'promote' | 'remove'> {

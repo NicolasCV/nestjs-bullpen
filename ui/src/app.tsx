@@ -6,6 +6,7 @@ import {
   Chips,
   JobDrawer,
   JobsTable,
+  Pager,
   QueueActionsBar,
   Sidebar,
   Toolbar,
@@ -15,7 +16,7 @@ import { config } from './config';
 import { IconBolt, IconMoon, IconSun } from './icons';
 import { LOGO } from './logo';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZES = [10, 25, 50, 100];
 type MutationAction = 'retry' | 'promote' | 'remove';
 type LiveMode = 'sse' | 'poll' | 'off';
 
@@ -34,6 +35,7 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState('active');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [topology, setTopology] = useState<QueueTopology | null>(null);
   const [detail, setDetail] = useState<JobDetail | null>(null);
@@ -52,6 +54,9 @@ export function App() {
     [queues, selected],
   );
   const effectiveReadOnly = config.readOnly || Boolean(current?.readOnly);
+
+  const statusCount = current?.counts[status] ?? 0;
+  const totalPages = Math.max(1, Math.ceil(statusCount / pageSize));
 
   const groups = useMemo(() => {
     const map = new Map<string, QueueSummary[]>();
@@ -75,10 +80,10 @@ export function App() {
   }, []);
 
   const refreshJobs = useCallback(
-    async (name: string, st: string, pg: number, silent = false) => {
+    async (name: string, st: string, pg: number, size: number, silent = false) => {
       setLoadingJobs(true);
       try {
-        setJobs(await api.listJobs(name, st, pg, PAGE_SIZE));
+        setJobs(await api.listJobs(name, st, pg, size));
       } catch (e) {
         if (!silent) setError((e as Error).message);
       } finally {
@@ -93,8 +98,8 @@ export function App() {
   }, [refreshQueues]);
 
   useEffect(() => {
-    if (selected) void refreshJobs(selected, status, page);
-  }, [selected, status, page, refreshJobs]);
+    if (selected) void refreshJobs(selected, status, page, pageSize);
+  }, [selected, status, page, pageSize, refreshJobs]);
 
   useEffect(() => {
     if (!selected) {
@@ -139,7 +144,7 @@ export function App() {
     if (!source) fallbackToPolling();
 
     const jobsTimer = window.setInterval(() => {
-      if (selected) void refreshJobs(selected, status, page, true);
+      if (selected) void refreshJobs(selected, status, page, pageSize, true);
     }, 5000);
 
     return () => {
@@ -148,7 +153,7 @@ export function App() {
       if (queuePoll != null) window.clearInterval(queuePoll);
       window.clearInterval(jobsTimer);
     };
-  }, [live, selected, status, page, refreshQueues, refreshJobs]);
+  }, [live, selected, status, page, pageSize, refreshQueues, refreshJobs]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -166,7 +171,7 @@ export function App() {
       setBusy(false);
     }
     await refreshQueues();
-    if (selected) await refreshJobs(selected, status, page);
+    if (selected) await refreshJobs(selected, status, page, pageSize);
   };
 
   const callJobAction = (name: string, action: MutationAction, id: string) =>
@@ -338,23 +343,16 @@ export function App() {
                 )}
               </div>
 
-              <div class="bp-pager">
-                <span>Page {page + 1}</span>
-                <button
-                  class="bp-icon-btn"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  ‹
-                </button>
-                <button
-                  class="bp-icon-btn"
-                  disabled={jobs.length < PAGE_SIZE}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  ›
-                </button>
-              </div>
+              <Pager
+                page={page}
+                pageSize={pageSize}
+                pageSizes={PAGE_SIZES}
+                totalPages={totalPages}
+                totalCount={statusCount}
+                status={status}
+                onPage={(p) => setPage(Math.min(totalPages - 1, Math.max(0, p)))}
+                onPageSize={(s) => (setPageSize(s), setPage(0))}
+              />
             </>
           ) : (
             <div class="bp-empty">
